@@ -145,7 +145,7 @@ git clone https://github.com/ashleve/lightning-hydra-template
 cd lightning-hydra-template
 
 # [OPTIONAL] create conda environment
-conda create -n myenv python=3.9
+conda create -n myenv python=3.11
 conda activate myenv
 
 # install pytorch according to instructions
