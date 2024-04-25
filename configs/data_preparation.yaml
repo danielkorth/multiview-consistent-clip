@@ -1,0 +1,9 @@
+# @package _global_
+
+defaults:
+  - _self_
+  - local: default
+
+output_dir: ${local.data_dir}/objaverse
+input_models_path: /root/multiview-robust-clip/input_models_path.json 
+num_objects: 100
