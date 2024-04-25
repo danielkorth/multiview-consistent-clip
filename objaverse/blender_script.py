@@ -54,8 +54,8 @@ render = scene.render
 render.engine = args.engine
 render.image_settings.file_format = "PNG"
 render.image_settings.color_mode = "RGBA"
-render.resolution_x = 512
-render.resolution_y = 512
+render.resolution_x = 224
+render.resolution_y = 224
 render.resolution_percentage = 100
 
 # scene.cycles.device = "CPU"

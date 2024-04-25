@@ -1,8 +1,6 @@
-import json
 from pathlib import Path
 import hydra
 from hydra import initialize, compose
-import tqdm
 
 from omegaconf import DictConfig
 import logging
@@ -14,7 +12,7 @@ logger = logging.getLogger(__name__)
 def render_data(cfg: DictConfig):
     
     command = (
-        f"python3 {cfg.local.objaverse_dir}/download_objaverse.py --start_i 0 --end_i {cfg.num_objects}"
+        f"python3 {cfg.local.base_dir}/objaverse/download_objaverse.py --start_i 0 --end_i {cfg.num_objects} --save_json_path {cfg.output_dir}"
     )
     subprocess.run(command, shell=True)
 

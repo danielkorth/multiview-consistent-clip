@@ -20,6 +20,11 @@ class Args:
     skip_completed: bool = False
     """whether to skip the files that have already been downloaded"""
 
+    save_json_path: str = "."
+    "where to save the json files"
+
+    seed: int = 42
+
 
 def get_completed_uids():
     # get all the files in the objaverse-images bucket
@@ -41,7 +46,7 @@ def get_completed_uids():
 if __name__ == "__main__":
     args = tyro.cli(Args)
 
-    random.seed(42)
+    random.seed(args.seed)
 
     uids = objaverse.load_uids()
 
@@ -60,7 +65,7 @@ if __name__ == "__main__":
         for uid in uids
     ]
 
-    with open("input_models_path.json", "w") as f:
+    with open(f"{args.save_json_path}/input_models_path.json", "w") as f:
         json.dump(uid_object_paths, f, indent=2)
     
     uid_to_name = dict()
@@ -68,5 +73,5 @@ if __name__ == "__main__":
     for uid in uids:
         uid_to_name[uid] = annotations[uid]['name']
     
-    with open("uid_to_name.json", "w") as f:
+    with open(f"{args.save_json_path}/uid_to_name.json", "w") as f:
         json.dump(uid_to_name, f, indent=2)
