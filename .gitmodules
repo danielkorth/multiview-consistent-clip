@@ -1,0 +1,3 @@
+[submodule "objaverse"]
+	path = objaverse
+	url = https://github.com/allenai/objaverse-rendering.git
