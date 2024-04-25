@@ -39,7 +39,9 @@ parser.add_argument("--output_dir", type=str, default="./views")
 parser.add_argument(
     "--engine", type=str, default="BLENDER_EEVEE", choices=["CYCLES", "BLENDER_EEVEE"]
 )
-parser.add_argument("--num_images", type=int, default=12)
+# parser.add_argument("--num_elevations", type=int, default=3)
+parser.add_argument("--elevation_angles", type=str, default="20,50,80", help="List of elevations")
+parser.add_argument("--num_azimuth_angles", type=int, default=12)
 parser.add_argument("--camera_dist", type=int, default=1.5)
 
 argv = sys.argv[sys.argv.index("--") + 1 :]
@@ -56,6 +58,7 @@ render.resolution_x = 512
 render.resolution_y = 512
 render.resolution_percentage = 100
 
+# scene.cycles.device = "CPU"
 scene.cycles.device = "GPU"
 scene.cycles.samples = 32
 scene.cycles.diffuse_bounces = 1
@@ -187,20 +190,25 @@ def save_images(object_file: str) -> None:
     empty = bpy.data.objects.new("Empty", None)
     scene.collection.objects.link(empty)
     cam_constraint.target = empty
-    for i in range(args.num_images):
-        # set the camera position
-        theta = (i / args.num_images) * math.pi * 2
-        phi = math.radians(60)
-        point = (
-            args.camera_dist * math.sin(phi) * math.cos(theta),
-            args.camera_dist * math.sin(phi) * math.sin(theta),
-            args.camera_dist * math.cos(phi),
-        )
-        cam.location = point
-        # render the image
-        render_path = os.path.join(args.output_dir, object_uid, f"{i:03d}.png")
-        scene.render.filepath = render_path
-        bpy.ops.render.render(write_still=True)
+
+    # elevations = args.elevation_angles
+    elevations = list(map(int, args.elevation_angles.split(',')))
+    for j, elevation in enumerate(elevations):
+        for i in range(args.num_azimuth_angles):
+            azimuth = (i / args.num_azimuth_angles) * math.pi * 2  # Complete circle
+
+            # set the camera positions
+            point = (
+                args.camera_dist * math.sin(math.radians(elevation)) * math.cos(azimuth),
+                args.camera_dist * math.sin(math.radians(elevation)) * math.sin(azimuth),
+                args.camera_dist * math.cos(math.radians(elevation)),
+            )
+            cam.location = point
+
+            # render the image
+            render_path = os.path.join(args.output_dir, object_uid, f"{(j*args.num_azimuth_angles + i):03d}.png")
+            scene.render.filepath = render_path
+            bpy.ops.render.render(write_still=True)
 
 
 def download_object(object_url: str) -> str:
