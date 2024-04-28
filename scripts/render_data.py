@@ -1,19 +1,21 @@
 import json
-from pathlib import Path
 import time
 import hydra
-from hydra import initialize, compose
 import tqdm
 
 from omegaconf import DictConfig
 import logging
 import subprocess
 
+from lightning import seed_everything
+
+
 logger = logging.getLogger(__name__)
 
 @hydra.main(version_base= None, config_path="../configs", config_name="data_preparation")
 def render_data(cfg: DictConfig):
-    import time
+    seed_everything(cfg.seed)
+    # TODO update the json files by removing the ids that had a timeout during rendering
     start_time = time.time()
     with open(cfg.input_models_path, "r") as f:
         model_paths = json.load(f)

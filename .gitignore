@@ -154,3 +154,5 @@ configs/local/default.yaml
 .aim
 
 outputs/
+
+tmp-objects/

@@ -28,6 +28,7 @@ matplotlib
 open3d
 transformers
 numpy
+sentencepiece # for siglip
 
 # --------- objaverse requirements ----------- # 
 boto3
@@ -35,3 +36,4 @@ wandb
 tqdm
 objaverse
 tyro==0.3.38
+
