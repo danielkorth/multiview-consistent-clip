@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 def render_data(cfg: DictConfig):
     
     command = (
-        f"python3 {cfg.local.base_dir}/objaverse/download_objaverse.py --start_i 0 --end_i {cfg.num_objects} --save_json_path {cfg.output_dir}"
+        # change python or python3
+        f"python {cfg.local.base_dir}/objaverse/download_objaverse.py --start_i 0 --end_i {cfg.num_objects} --save_json_path {cfg.output_dir}"
     )
     subprocess.run(command, shell=True)
 

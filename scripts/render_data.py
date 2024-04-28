@@ -18,8 +18,10 @@ def render_data(cfg: DictConfig):
         model_paths = json.load(f)
     for model_path in tqdm.tqdm(model_paths):
         command = (
-            f"export DISPLAY=:0 && export SSL_CERT_DIR=/etc/ssl/certs &&"
-            f"~/blender-3.2.2-linux-x64/blender -b -P {cfg.local.base_dir}/objaverse/blender_script.py --"
+            # for linux
+            # f"export DISPLAY=:0 && export SSL_CERT_DIR=/etc/ssl/certs &&"
+            # for windows
+            f"blender -b -P {cfg.local.base_dir}/objaverse/blender_script.py --"
             f" --object_path {model_path}"
             f" --output_dir {cfg.output_dir}/renderings"
         )
