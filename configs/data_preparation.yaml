@@ -6,4 +6,4 @@ defaults:
 
 output_dir: ${local.data_dir}/objaverse
 input_models_path: ${output_dir}/input_models_path.json 
-num_objects: 10
+num_objects: 2048

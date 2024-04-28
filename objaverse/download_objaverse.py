@@ -11,10 +11,7 @@ from tqdm import tqdm
 
 @dataclass
 class Args:
-    start_i: int
-    """total number of files uploaded"""
-
-    end_i: int
+    count: int
     """total number of files uploaded"""
 
     skip_completed: bool = False
@@ -48,30 +45,26 @@ if __name__ == "__main__":
 
     random.seed(args.seed)
 
-    uids = objaverse.load_uids()
+    annotations = objaverse.load_annotations()
 
-    random.shuffle(uids)
+    # sort by number of likes
+    sorted_annotations = sorted(annotations.items(), key=lambda item: item[1]['likeCount'], reverse=True)
+
+    limited_sorted_annotations = sorted_annotations[:args.count]
+
+    uid_to_name = dict()
+    for uid, metadata in limited_sorted_annotations:
+        uid_to_name[uid] = metadata['name']
 
     object_paths = objaverse._load_object_paths()
-    uids = uids[args.start_i : args.end_i]
-
-    # get the uids that have already been downloaded
-    if args.skip_completed:
-        completed_uids = get_completed_uids()
-        uids = [uid for uid in uids if uid not in completed_uids]
 
     uid_object_paths = [
         f"https://huggingface.co/datasets/allenai/objaverse/resolve/main/{object_paths[uid]}"
-        for uid in uids
+        for uid in uid_to_name.keys() 
     ]
 
     with open(f"{args.save_json_path}/input_models_path.json", "w") as f:
         json.dump(uid_object_paths, f, indent=2)
-    
-    uid_to_name = dict()
-    annotations = objaverse.load_annotations(uids)
-    for uid in uids:
-        uid_to_name[uid] = annotations[uid]['name']
     
     with open(f"{args.save_json_path}/uid_to_name.json", "w") as f:
         json.dump(uid_to_name, f, indent=2)
