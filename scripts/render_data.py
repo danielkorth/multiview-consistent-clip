@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import time
 import hydra
 from hydra import initialize, compose
 import tqdm
@@ -23,7 +24,16 @@ def render_data(cfg: DictConfig):
             f" --object_path {model_path}"
             f" --output_dir {cfg.output_dir}/renderings"
         )
-        subprocess.run(command, shell=True)
+        process = subprocess.Popen(command, shell=True)
+        start_command_time = time.time()
+        while True:
+            if process.poll() is not None:
+                break
+            current_time = time.time()
+            if current_time - start_command_time > 5*60:
+                process.kill()
+                logger.warning("Command execution exceeded 5 minute. Terminating process.")
+                break
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"Generation completed in {elapsed_time} seconds.")
