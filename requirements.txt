@@ -29,6 +29,7 @@ open3d
 transformers
 numpy
 sentencepiece # for siglip
+nptyping
 
 # --------- objaverse requirements ----------- # 
 boto3
