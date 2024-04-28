@@ -5,6 +5,8 @@ import torch
 
 from src.data.mnist_datamodule import MNISTDataModule
 
+from src.data.dataset.rendered_images import RenderedImagesDataset
+
 
 @pytest.mark.parametrize("batch_size", [32, 128])
 def test_mnist_datamodule(batch_size: int) -> None:
@@ -36,3 +38,13 @@ def test_mnist_datamodule(batch_size: int) -> None:
     assert len(y) == batch_size
     assert x.dtype == torch.float32
     assert y.dtype == torch.int64
+
+
+def test_rendered_images_dataset():
+    path_to_rendered_images = "C:\data\objaverse"
+    dataset = RenderedImagesDataset(path_to_rendered_images)
+    dataset.load_relative_image_paths()
+    
+    image, hash = dataset.__getitem__(0)
+    print(image.shape)
+    print(hash)
