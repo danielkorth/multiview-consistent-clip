@@ -6,6 +6,8 @@ import torch
 from src.data.mnist_datamodule import MNISTDataModule
 
 from src.data.dataset.rendered_images import RenderedImagesDataset
+from src.data.dataset.lvm_embeddings import LVMEmbeddingsDataset
+from src.data.datamodule.lvm_embeddings import LVMEmbeddingsDataModule
 
 
 @pytest.mark.parametrize("batch_size", [32, 128])
@@ -48,3 +50,22 @@ def test_rendered_images_dataset():
     image, hash = dataset.__getitem__(0)
     print(image.shape)
     print(hash)
+
+def test_lmv_embeddings_dataset():
+    path_to_data = "C:\\Users\\Hannah\\sw\\multiview-robust-clip\\data\\objaverse"
+    path_to_hashes = "C:\\Users\\Hannah\\sw\\multiview-robust-clip\\data\\objaverse\\training_hashes.csv"
+
+    dataset = LVMEmbeddingsDataset(path_to_data, path_to_hashes)
+
+    data_dict = dataset.__getitem__(3)
+    print(data_dict["embedding"])
+    print(data_dict["text_prompt"])
+
+def test_lmv_embeddings_datamodule():
+    path_to_data = "C:\\Users\\Hannah\\sw\\multiview-robust-clip\\data\\objaverse"
+
+    # TODO: provide 3 different paths to hashe files
+    path_to_hashes = "C:\\Users\\Hannah\\sw\\multiview-robust-clip\\data\\objaverse\\training_hashes.csv"
+
+    datamodule = LVMEmbeddingsDataModule(path_to_data, path_to_hashes, path_to_hashes, path_to_hashes)
+    datamodule.setup()

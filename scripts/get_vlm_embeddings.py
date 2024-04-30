@@ -19,7 +19,7 @@ def get_vlm_embeddings(cfg: DictConfig):
     seed_everything(cfg.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataset = RenderedImagesDataset(cfg.output_dir)
-    dataloader = DataLoader(dataset, batch_size=1024, num_workers=4)
+    dataloader = DataLoader(dataset, batch_size=1024)
     model = VLM(vlm_name = cfg.vlm_name, device=device)
 
     output_dir = Path(cfg.output_dir) / "renderings"
