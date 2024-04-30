@@ -5,24 +5,26 @@ from lightning import LightningModule
 from torchmetrics import MeanMetric
 
 
-from src.models.components.vlm_head import VLMHead
 from src.models.components.loss_functions import loss_distance_between_image_pairs
 
 class ViewInvariantEmbeddingModule(LightningModule):
 
     def __init__(
         self,
+        net: torch.nn.Module,
+        optimizer: torch.optim.Optimizer,
+        scheduler: torch.optim.lr_scheduler,
     ) -> None:
 
         super().__init__()
 
         self.save_hyperparameters(logger=False)
 
-        self.net = VLMHead()
+        self.net = net
 
-        self.train_loss = MeanMetric()
-        self.val_loss = MeanMetric()
-        self.test_loss = MeanMetric()
+        # self.train_loss = MeanMetric()
+        # self.val_loss = MeanMetric()
+        # self.test_loss = MeanMetric()
 
     def forward(self, img_embeddings: torch.Tensor) -> torch.Tensor:
         """ img_embeddings: torch.tensor (batch size, data point size, embedding size)"""
@@ -88,17 +90,28 @@ class ViewInvariantEmbeddingModule(LightningModule):
         """Lightning hook that is called when a test epoch ends."""
         pass
 
-    def setup(self, stage: str) -> None:
-        """Lightning hook that is called at the beginning of fit (train + validate), validate,
-        test, or predict.
+    # def setup(self, stage: str) -> None:
+    #     """Lightning hook that is called at the beginning of fit (train + validate), validate,
+    #     test, or predict.
 
-        This is a good hook when you need to build models dynamically or adjust something about
-        them. This hook is called on every process when using DDP.
+    #     This is a good hook when you need to build models dynamically or adjust something about
+    #     them. This hook is called on every process when using DDP.
 
-        :param stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
-        """
-        raise NotImplementedError
+    #     :param stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
+    #     """
+    #     raise NotImplementedError
 
     def configure_optimizers(self) -> Dict[str, Any]:
-        optimizer = torch.optim.SGD(self.net.parameters(), lr=1e-3)
+        optimizer = self.hparams.optimizer(params=self.trainer.model.parameters())
+        if self.hparams.scheduler is not None:
+            scheduler = self.hparams.scheduler(optimizer=optimizer)
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
+                    "scheduler": scheduler,
+                    "monitor": "val/loss",
+                    "interval": "epoch",
+                    "frequency": 1,
+                },
+            }
         return {"optimizer": optimizer}
