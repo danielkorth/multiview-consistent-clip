@@ -38,7 +38,6 @@ class ViewComprehensiveEmbeddingModule(LightningModule):
 
         return view_comprehensive_decoding, vi_encoding
 
-
     def _loss(
             self, 
             text_prompt_embedding: torch.tensor,
@@ -48,9 +47,9 @@ class ViewComprehensiveEmbeddingModule(LightningModule):
         ) -> torch.tensor:
 
         # Autoencoder loss - dist between original and decoded img embeddings
-        
+        # dont use lists
 
-        # View independent loss - ...
+        # View independent loss - dist between view independent encodings.
 
         raise NotImplementedError
 

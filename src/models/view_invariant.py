@@ -6,6 +6,7 @@ from torchmetrics import MeanMetric
 
 
 from src.models.components.vlm_head import VLMHead
+from src.models.components.loss_functions import loss_view_invariant_embedding
 
 class ViewInvariantEmbeddingModule(LightningModule):
 
@@ -26,39 +27,6 @@ class ViewInvariantEmbeddingModule(LightningModule):
     def forward(self, img_embedding: torch.Tensor) -> torch.Tensor:
         return self.net.forward(img_embedding)
 
-    def _loss(
-            self, 
-            text_prompt_embedding: torch.tensor,
-            original_img_embeddings: List[torch.tensor],
-            predicted_img_embeddings: List[torch.tensor]
-        ) -> torch.tensor:
-    
-        num_img_embeddings = len(original_img_embeddings)
-
-        #TODO decide if we want to compute similarity to ref embedding or to neighbour embedding
-        # ref_img_embedding = np.mean(img_embeddings, axis=0)
-
-        loss = 0.0
-
-        for i in range(num_img_embeddings):
-            original_img_embedding = original_img_embeddings[i]
-            predicted_img_embedding = predicted_img_embeddings[i]
-
-            diff_in_dist_to_text_prompt = \
-            torch.max(
-                torch.tensor(0.0).to(text_prompt_embedding.device), 
-                torch.norm(text_prompt_embedding - predicted_img_embedding) - torch.norm(text_prompt_embedding - original_img_embedding))
-
-            loss += diff_in_dist_to_text_prompt
-
-            neighbour_predicted_img_embedding = predicted_img_embeddings[(i+1) % num_img_embeddings]
-            dist_to_neighbour_img_embedding = \
-                torch.norm(predicted_img_embedding - neighbour_predicted_img_embedding)
-            
-            loss += dist_to_neighbour_img_embedding
-
-        return loss
-
     def model_step(
         self, batch: Dict[torch.tensor, List[torch.tensor]]
     ) -> torch.Tensor:
@@ -70,7 +38,10 @@ class ViewInvariantEmbeddingModule(LightningModule):
         predicted_img_embeddings = self.forward(torch.stack(original_img_embeddings))
         predicted_img_embeddings_list = list(torch.unbind(predicted_img_embeddings))
 
-        return self._loss(text_prompt_embedding, original_img_embeddings, predicted_img_embeddings_list)
+        return loss_view_invariant_embedding(
+            text_prompt_embedding,
+            original_img_embeddings,
+            predicted_img_embeddings_list)
 
     def training_step(
         self, batch: Dict[torch.tensor, List[torch.tensor]], batch_idx: int
