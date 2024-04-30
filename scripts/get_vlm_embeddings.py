@@ -36,8 +36,9 @@ def get_vlm_embeddings(cfg: DictConfig):
             view_id = one_info.name[0:3]
         
             # Save embeddings to the output directory
-            torch.save(one_embed, output_dir / one_info.parent / f"clip_embed_{view_id}.pt")
+            torch.save(one_embed.cpu(), output_dir / one_info.parent / f"clip_embed_{view_id}.pt")
 
+    
 
 if __name__ == "__main__":
     get_vlm_embeddings()
