@@ -6,7 +6,7 @@ from torchmetrics import MeanMetric
 
 
 from src.models.components.vlm_head import VLMHead
-from src.models.components.loss_functions import loss_view_invariant_embedding
+from src.models.components.loss_functions import loss_distance_between_image_pairs
 
 class ViewInvariantEmbeddingModule(LightningModule):
 
@@ -24,24 +24,36 @@ class ViewInvariantEmbeddingModule(LightningModule):
         self.val_loss = MeanMetric()
         self.test_loss = MeanMetric()
 
-    def forward(self, img_embedding: torch.Tensor) -> torch.Tensor:
-        return self.net.forward(img_embedding)
+    def forward(self, img_embeddings: torch.Tensor) -> torch.Tensor:
+        """ img_embeddings: torch.tensor (batch size, data point size, embedding size)"""
+
+        # Reshape the input tensor to (batch size * data points size, embedding size)
+        original_shape = img_embeddings.shape
+        img_embeddings = img_embeddings.view(-1, original_shape[-1])
+
+        predictions = self.net.forward(img_embeddings)
+        return predictions.view(*original_shape)
 
     def model_step(
-        self, batch: Dict[torch.tensor, List[torch.tensor]]
+        self, batch: Dict[torch.tensor, torch.tensor, torch.tensor]
     ) -> torch.Tensor:
+        
+        """
+        batch: dict{ 
+            prompt_embeddings: torch.tensor (batch size, embedding size), 
+            original_img_embeddings: torch.tensor (batch size, data points size, embedding size)}
+            distances between text and image embedding: torch.tensor (batch size, data points size)
+        """
 
-        text_prompt_embedding = batch["text_prompt_embedding"]
+        # text_prompt_embeddings = batch["text_prompt_embedding"]
+        # distances = batch["distances"]
+        # batch_size, data_points_size, embedding_size = original_img_embeddings.size()
+
         original_img_embeddings = batch["original_img_embeddings"]
+        predicted_img_embeddings = self.forward(original_img_embeddings)
 
-        #TODO run inference on larger batches?
-        predicted_img_embeddings = self.forward(torch.stack(original_img_embeddings))
-        predicted_img_embeddings_list = list(torch.unbind(predicted_img_embeddings))
-
-        return loss_view_invariant_embedding(
-            text_prompt_embedding,
-            original_img_embeddings,
-            predicted_img_embeddings_list)
+        #Assuming datapoint size = 2, aka using 2 images per object.
+        return loss_distance_between_image_pairs(predicted_img_embeddings)
 
     def training_step(
         self, batch: Dict[torch.tensor, List[torch.tensor]], batch_idx: int
@@ -90,7 +102,3 @@ class ViewInvariantEmbeddingModule(LightningModule):
     def configure_optimizers(self) -> Dict[str, Any]:
         optimizer = torch.optim.SGD(self.net.parameters(), lr=1e-3)
         return {"optimizer": optimizer}
-
-
-if __name__ == "__main__":
-    _ = ViewInvariantEmbeddingModule()
