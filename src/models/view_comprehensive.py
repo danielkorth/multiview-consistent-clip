@@ -5,8 +5,8 @@ from lightning import LightningModule
 from torchmetrics import MeanMetric
 
 
-from src.models.components.vlm_embedding_encoder import VLMEmbeddingEncoder
-from src.models.components.vlm_embedding_decoder import VLMEmbeddingDecoder
+from src.models.components.vlm_head import VLMHead
+from src.models.components.loss_functions import loss_distance_between_image_pairs, loss_autoencoder_embedding
 
 class ViewComprehensiveEmbeddingModule(LightningModule):
 
@@ -18,56 +18,45 @@ class ViewComprehensiveEmbeddingModule(LightningModule):
 
         self.save_hyperparameters(logger=False)
 
-        self.view_invariant_encoder = VLMEmbeddingEncoder()
-        self.view_invariant_decoder = VLMEmbeddingDecoder()
-        self.view_dependent_encoder = VLMEmbeddingEncoder()
-        self.view_dependent_decoder = VLMEmbeddingDecoder()
+        self.view_invariant_head = VLMHead()
+        self.view_dependent_head = VLMHead()
 
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
         self.test_loss = MeanMetric()
 
-    def forward(self, img_embedding: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        vi_encoding = self.view_invariant_encoder(img_embedding)
-        vi_decoding = self.view_invariant_decoder(vi_encoding)
+    def forward(self, img_embeddings: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """ img_embeddings: torch.tensor (batch size, data points size, embedding size)"""
+        #TODO perform reshaping
+        vi_embedding = self.view_invariant_head(img_embeddings)
+        vd_embedding = self.view_dependent_head(img_embeddings)
 
-        vd_encoding = self.view_dependent_encoder(img_embedding)
-        vd_decoding = self.view_dependent_decoder(vd_encoding)
+        view_comprehensive_embedding = vi_embedding + vd_embedding
 
-        view_comprehensive_decoding = vi_decoding + vd_decoding
-
-        return view_comprehensive_decoding, vi_encoding
-
-    def _loss(
-            self, 
-            text_prompt_embedding: torch.tensor,
-            original_img_embeddings: List[torch.tensor],
-            decoded_img_embeddings: List[torch.tensor],
-            view_independent_encodings: List[torch.tensor]
-        ) -> torch.tensor:
-
-        # Autoencoder loss - dist between original and decoded img embeddings
-        # dont use lists
-
-        # View independent loss - dist between view independent encodings.
-
-        raise NotImplementedError
+        return view_comprehensive_embedding, vi_embedding
 
     def model_step(
-        self, batch: Dict[torch.tensor, List[torch.tensor]]
+        self, batch: Dict[torch.tensor, torch.tensor, torch.tensor]
     ) -> torch.Tensor:
         
-        text_prompt_embedding = batch["text_prompt_embedding"]
-        original_img_embeddings = batch["original_img_embeddings"]
-
-        #TODO run inference on larger batches?
-        view_comprehensive_decodings, view_independent_encodings = self.forward(torch.stack(original_img_embeddings))
+        """
+        batch: dict{ 
+            prompt_embeddings: torch.tensor (batch size, embedding size), 
+            original_img_embeddings: torch.tensor (batch size, data points size, embedding size)}
+            distances between text and image embedding: torch.tensor (batch size, data points size)
+        """
         
-        return self._loss(
-            text_prompt_embedding,
-            original_img_embeddings,
-            list(torch.unbind(view_comprehensive_decodings)), 
-            list(torch.unbind(view_independent_encodings)))
+        # text_prompt_embeddings = batch["text_prompt_embedding"]
+        # distances = batch["distances"]
+        # batch_size, data_points_size, embedding_size = original_img_embeddings.size()
+
+        original_img_embeddings = batch["original_img_embeddings"]
+        view_comprehensive_decodings, view_independent_encodings = self.forward(original_img_embeddings)
+
+        loss_auto = loss_autoencoder_embedding(original_img_embeddings, view_comprehensive_decodings)
+        loss_vi = loss_distance_between_image_pairs(view_independent_encodings)
+        
+        return loss_auto + loss_vi
 
     def training_step(
         self, batch: Dict[torch.tensor, List[torch.tensor]], batch_idx: int
@@ -116,7 +105,3 @@ class ViewComprehensiveEmbeddingModule(LightningModule):
     def configure_optimizers(self) -> Dict[str, Any]:
         optimizer = torch.optim.SGD(self.net.parameters(), lr=1e-3)
         return {"optimizer": optimizer}
-
-
-if __name__ == "__main__":
-    _ = ViewComprehensiveEmbeddingModule()
