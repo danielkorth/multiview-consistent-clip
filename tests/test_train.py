@@ -4,9 +4,30 @@ from pathlib import Path
 import pytest
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, open_dict
+import pytorch_lightning as pl
 
 from src.train import train
 from tests.helpers.run_if import RunIf
+
+from src.models.view_invariant import ViewInvariantEmbeddingModule
+from src.data.datamodule.lvm_embeddings import LVMEmbeddingsDataModule
+
+
+
+def test_train_vlm_head()->None:
+
+    model = ViewInvariantEmbeddingModule()
+    print('Model is initialized.')
+
+    data_module = LVMEmbeddingsDataModule(
+        data_dir = 'C:\\Users\\Hannah\\sw\\multiview-robust-clip\\data\\objaverse',
+        training_stage = 'overfit_on_batch')
+    print('Data module is initialized.')
+
+    trainer = pl.Trainer(max_epochs=4) 
+    print('Trainer is initialized.')
+
+    trainer.fit(model, data_module) 
 
 
 def test_train_fast_dev_run(cfg_train: DictConfig) -> None:
