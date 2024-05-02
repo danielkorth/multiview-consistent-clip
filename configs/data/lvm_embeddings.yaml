@@ -1,4 +1,4 @@
-_target_: src.data.datamodule.lvm_embeddings
+_target_: src.data.datamodule.lvm_embeddings.LVMEmbeddingsDataModule
 data_dir: ${local.data_dir}
 batch_size: 128 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
 num_workers: 1

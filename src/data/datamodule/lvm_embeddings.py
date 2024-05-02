@@ -10,7 +10,7 @@ class LVMEmbeddingsDataModule(pl.LightningDataModule):
             batch_size: int,
             shuffle: bool = True,
             num_workers: int = 1,
-            pin_memory: bool = False
+            pin_memory: bool = False,
             **kwargs) -> None:
         super().__init__()
 

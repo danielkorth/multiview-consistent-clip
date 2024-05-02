@@ -19,7 +19,7 @@ from src.utils import (
 
 log = RankedLogger(__name__, rank_zero_only=True)
 
-@hydra.main(version_base=None, config_path="../conf", config_name="train")
+@hydra.main(version_base=None, config_path="../configs", config_name="train")
 def train(cfg: DictConfig) -> None:
     if cfg.get("seed"):
         L.seed_everything(cfg.seed, workers=True)
