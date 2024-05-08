@@ -5,6 +5,7 @@ import os
 import json
 from typing import Dict, List
 import random
+import numpy as np
 
 
 class LVMEmbeddingsDataset(Dataset):
@@ -13,7 +14,9 @@ class LVMEmbeddingsDataset(Dataset):
             data_dir: str,
             objects_list_csv_path: str, 
             num_encodings_per_object: int = 36, 
-            datapoint_size: int = 2):
+            datapoint_size: int = 2,
+            max_datapoint_size: int = 36,
+            mode: str = 'train'):
         super().__init__()
 
         self.data_dir: str = data_dir
@@ -23,6 +26,9 @@ class LVMEmbeddingsDataset(Dataset):
 
         self.num_encodings_per_object = num_encodings_per_object
         self.datapoint_size = datapoint_size
+        self.max_datapoint_size = max_datapoint_size
+
+        self.mode = mode
 
     def __len__(self) -> int:
         return len(self.object_folders)
@@ -49,14 +55,17 @@ class LVMEmbeddingsDataset(Dataset):
             original_img_embeddings: torch.tensor (data points size, embedding size)}
             distances between text and image embedding: torch.tensor (data points size)
         """
-        image_indices = random.sample(range(self.num_encodings_per_object), self.datapoint_size)
+        if self.mode == 'train':
+            image_indices = random.sample(range(self.num_encodings_per_object), self.datapoint_size)
+        else: 
+            image_indices = np.arange(self.max_datapoint_size)
 
         #TODO: change "clip_embed_000.pt" with name of prompt embedding file
-        prompt_embedding_path = os.path.join(self.data_dir, self.object_folders[idx], "clip_embed_000.pt") 
+        prompt_embedding_path = os.path.join(self.data_dir, "renderings", self.object_folders[idx], "clip_text_embed.pt") 
 
         image_embedding_paths = \
-            [os.path.join(self.data_dir, self.object_folders[idx], 'clip_embed_' + str(embedding_idx).zfill(3) + ".pt") \
-              for embedding_idx in image_indices]
+            [os.path.join(self.data_dir, "renderings", self.object_folders[idx], 'clip_embed_' + str(embedding_idx).zfill(3) + ".pt") \
+            for embedding_idx in image_indices]
 
         prompt_embedding = torch.load(prompt_embedding_path)
         image_embeddings_list = [torch.load(image_embedding_path) for image_embedding_path in image_embedding_paths]
@@ -66,5 +75,3 @@ class LVMEmbeddingsDataset(Dataset):
         distances = torch.stack(distances_list)
 
         return {'prompt_embedding': prompt_embedding, 'image_embeddings': image_embeddings, 'distances': distances}
-    
-

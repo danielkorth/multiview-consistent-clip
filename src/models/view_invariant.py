@@ -1,8 +1,9 @@
 from typing import Any, Dict, List
 
 import torch
-from pytorch_lightning import LightningModule
-from torchmetrics import MeanMetric
+from lightning import LightningModule
+from torchmetrics import MaxMetric, MeanMetric
+from torchmetrics.functional.pairwise import pairwise_cosine_similarity
 
 
 from src.models.components.loss_functions import loss_distance_between_image_pairs
@@ -13,18 +14,20 @@ class ViewInvariantEmbeddingModule(LightningModule):
         self,
         net: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
-        scheduler: torch.optim.lr_scheduler,
+        scheduler: torch.optim.lr_scheduler = None,
+        compile: bool = False,
     ) -> None:
 
         super().__init__()
 
-        self.save_hyperparameters(logger=False)
+        self.save_hyperparameters(logger=False, ignore=['net'])
 
-        self.net = net
+        self.net = net 
 
-        # self.train_loss = MeanMetric()
-        # self.val_loss = MeanMetric()
-        # self.test_loss = MeanMetric()
+        # for averaging loss across batches
+        self.train_loss = MeanMetric()
+        self.val_loss = MeanMetric()
+        self.test_loss = MeanMetric()
 
     def forward(self, img_embeddings: torch.Tensor) -> torch.Tensor:
         """ img_embeddings: torch.tensor (batch size, data point size, embedding size)"""
@@ -46,36 +49,36 @@ class ViewInvariantEmbeddingModule(LightningModule):
             distances between text and image embedding: torch.tensor (batch size, data points size)
         """
 
-        # text_prompt_embeddings = batch["prompt_embedding"]
-        # distances = batch["distances"]
-        # batch_size, data_points_size, embedding_size = original_img_embeddings.size()
+        text_prompt_embeddings = batch["prompt_embedding"]
+        distances = batch["distances"]
 
         original_img_embeddings = batch["image_embeddings"]
         predicted_img_embeddings = self.forward(original_img_embeddings)
 
         #Assuming datapoint size = 2, aka using 2 images per object.
-        return loss_distance_between_image_pairs(predicted_img_embeddings)
+        # sim = pairwise_cosine_similarity(predicted_img_embeddings, reduction='sum')
+        sim = loss_distance_between_image_pairs(predicted_img_embeddings)
+        return sim
 
     def training_step(
         self, batch: Dict[str, torch.tensor], batch_idx: int
     ) -> torch.Tensor:
 
         loss = self.model_step(batch)
-        self.train_loss.update(loss)
-        self.log("train/loss", self.train_loss.compute(), on_step=False, on_epoch=True, prog_bar=True)
-
+        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch: Dict[str, torch.tensor], batch_idx: int) -> None:
+        original_img_embeddings = batch["image_embeddings"]
+        predicted_img_embeddings = self.forward(original_img_embeddings)
+        sim = pairwise_cosine_similarity(predicted_img_embeddings[0], predicted_img_embeddings[0])
+        self.logger.log_image(key='heatmap', images=[sim])
         loss = self.model_step(batch)
-        self.val_loss.update(loss)
-        self.log("val/loss", self.val_loss.compute(), on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
 
     def test_step(self, batch: Dict[str, torch.tensor], batch_idx: int) -> None:
-        loss= self.model_step(batch)
-
-        self.test_loss.update(loss)
-        self.log("test/loss", self.test_loss.compute(), on_step=False, on_epoch=True, prog_bar=True)
+        loss = self.model_step(batch)
+        self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
     # def on_train_epoch_end(self) -> None:
     #     "Lightning hook that is called when a training epoch ends."
@@ -85,16 +88,17 @@ class ViewInvariantEmbeddingModule(LightningModule):
     #     "Lightning hook that is called when training starts."
     #     pass
 
-    # def setup(self, stage: str) -> None:
-    #     """Lightning hook that is called at the beginning of fit (train + validate), validate,
-    #     test, or predict.
+    def setup(self, stage: str) -> None:
+        """Lightning hook that is called at the beginning of fit (train + validate), validate,
+        test, or predict.
 
-    #     This is a good hook when you need to build models dynamically or adjust something about
-    #     them. This hook is called on every process when using DDP.
+        This is a good hook when you need to build models dynamically or adjust something about
+        them. This hook is called on every process when using DDP.
 
-    #     :param stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
-    #     """
-    #     raise NotImplementedError
+        :param stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
+        """
+        if self.hparams.compile and stage == "fit":
+            self.net = torch.compile(self.net)
 
 
     def configure_optimizers(self) -> Dict[str, Any]:

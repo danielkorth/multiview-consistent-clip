@@ -2,6 +2,7 @@ import json
 import time
 import hydra
 import tqdm
+import os
 
 from omegaconf import DictConfig
 import logging
@@ -41,6 +42,27 @@ def render_data(cfg: DictConfig):
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f"Generation completed in {elapsed_time} seconds.")
+
+    # post processing and remove all unrednreded stuff
+    with open(f'{cfg.output_dir}/uid_to_name.json', 'r') as f:
+        uid_to_name = json.load(f)
+
+    folder_names = [name for name in os.listdir(f'{cfg.output_dir}/renderings') if os.path.isdir(os.path.join(f'{cfg.output_dir}/renderings', name))]
+    uid_to_name = {k: v for k, v in uid_to_name.items() if k in folder_names}
+    new_input_models_path = list()
+
+    for path in model_paths:
+        for idx in folder_names:
+            if idx in path:
+                new_input_models_path.append(path)
+
+    with open(f'{cfg.output_dir}/uid_to_name.json', 'w') as f:
+        json.dump(uid_to_name, f)
+
+    with open(f'{cfg.output_dir}/input_models_path.json', 'w') as f:
+        json.dump(model_paths, f)
+    
+    print(f"Done with postprocessing")
     
 if __name__ == "__main__":
     render_data()

@@ -86,6 +86,18 @@ def generate_splits(cfg: DictConfig) -> Optional[float]:
     # Save the DataFrame to a CSV file
     train_batch_df.to_csv(data_path / 'train_batch.csv', index=False)
 
+    # Create a DataFrame for overfitting with only a single ID for validation
+    val_overfit_df = pd.DataFrame(val_uids[:1], columns=['uid'])
+
+    # Save the DataFrame to a CSV file
+    val_overfit_df.to_csv(data_path / 'val_overfit.csv', index=False)
+
+    # Create a DataFrame for a small batch training with 8 IDs for validation
+    val_batch_df = pd.DataFrame(val_uids[:8], columns=['uid'])
+
+    # Save the DataFrame to a CSV file
+    val_batch_df.to_csv(data_path / 'val_batch.csv', index=False)
+
     log.info("CSV files have been saved.")
 
 if __name__ == "__main__":

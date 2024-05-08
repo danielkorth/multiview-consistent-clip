@@ -25,10 +25,12 @@ class VLM(nn.Module):
         inputs = self.processor(images=x, return_tensors="pt").to(self.device)
         return self.model.get_image_features(**inputs)
 
+    @torch.no_grad()
     def forward_text(self, x: List[str]):
         tokens = self.tokenizer(x, padding="max_length", return_tensors="pt").to(self.device)
         return self.model.get_text_features(**tokens)
-    
+
+    @torch.no_grad() 
     def forward(self, texts: List[str], image):
         inputs = self.processor(text=texts, images=image, padding="max_length", return_tensors="pt").to(self.device)
         outputs = self.model(**inputs)

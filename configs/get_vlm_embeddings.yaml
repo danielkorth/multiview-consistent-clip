@@ -8,5 +8,7 @@ seed: 42
 output_dir: ${local.data_dir}/objaverse
 input_models_path: ${output_dir}/input_models_path.json 
 num_objects: 2048
+batch_size_images: 1024
+batch_size_text: 32
 
-vlm_name: ??? # specify in command line
+vlm_name: 'clip' # specify in command line
