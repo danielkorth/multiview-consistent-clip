@@ -5,12 +5,16 @@ import matplotlib.pyplot as plt
 from nptyping import NDArray
 from typing import Tuple
 from pathlib import Path
+from PIL import Image
+import numpy as np
 
 
 class RenderedImagesDataset(Dataset):
     def __init__(self, objaverse_dir: str) -> None:
         super().__init__()
         self.renderings_dir: str = os.path.join(objaverse_dir, "renderings")
+        if not os.path.exists(self.renderings_dir):
+            os.makedirs(self.renderings_dir)
 
         self.image_relative_paths: list[str] = []
 
@@ -33,7 +37,11 @@ class RenderedImagesDataset(Dataset):
         assert self.image_relative_paths, "Relative image paths not loaded."
 
         image_relative_path = self.image_relative_paths[idx]
-        image = plt.imread(os.path.join(self.renderings_dir, image_relative_path))[:, :, :3]
+        # alpha compositing
+        png = Image.open(Path(self.renderings_dir) / image_relative_path).convert("RGBA")
+        background = Image.new('RGBA', png.size, (255, 255, 255))
+        img = Image.alpha_composite(background, png)
+        image =np.asarray(img)[:, :, :3]
 
         return {
            'image': image,

@@ -21,6 +21,8 @@ def get_vlm_embeddings(cfg: DictConfig):
     # assert False == True, "need to fix TODO"
     seed_everything(cfg.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if not os.path.exists(cfg.output_dir):
+        os.makedirs(cfg.output_dir)
 
     dataset_images = RenderedImagesDataset(cfg.output_dir)
     dataset_captions = CaptionsDataset(cfg.output_dir)
@@ -43,20 +45,20 @@ def get_vlm_embeddings(cfg: DictConfig):
             # dirty fix for following problem fix 
             # actually: TODO filteer the uid_to_name.json based on what was rendered and what was not rendered
             if os.path.exists(renderings_dir / uid):
-                torch.save(caption.cpu(), renderings_dir / uid / f"{cfg.vlm_name}_text_embed.pt")
+                torch.save(caption.detach().cpu(), renderings_dir / uid / f"{cfg.vlm_name}_text_embed.pt")
 
     # get vision embeddings
-    # for batch_idx, data in enumerate(tqdm.tqdm(dataloader_images, desc="Processing images")):
-    #     info, images = data['path'], data['image']
-    #     images = images.to(device)
-    #     image_embeddings = model.forward_image(images)
+    for batch_idx, data in enumerate(tqdm.tqdm(dataloader_images, desc="Processing images")):
+        info, images = data['path'], data['image']
+        images = images.to(device)
+        image_embeddings = model.forward_image(images)
 
-    #     for one_info, one_embed in zip(info, image_embeddings):
-    #         one_info = Path(one_info)
-    #         view_id = one_info.name[0:3]
+        for one_info, one_embed in zip(info, image_embeddings):
+            one_info = Path(one_info)
+            view_id = one_info.name[0:3]
         
-    #         # Save embeddings to the output directory
-    #         torch.save(one_embed.cpu(), renderings_dir / one_info.parent / f"{cfg.vlm_name}_embed_{view_id}.pt")
+            # Save embeddings to the output directory
+            torch.save(one_embed.detach().cpu(), renderings_dir / one_info.parent / f"{cfg.vlm_name}_embed_{view_id}.pt")
     
 
 if __name__ == "__main__":
