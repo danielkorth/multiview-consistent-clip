@@ -7,7 +7,7 @@ defaults:
 seed: 42
 output_dir: ${local.data_dir}/objaverse
 input_models_path: ${output_dir}/input_models_path.json 
-num_objects: 2048
+num_objects: 12031
 
 train_split_size: 0.8
 val_split_size: 0.1

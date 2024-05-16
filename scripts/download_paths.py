@@ -10,7 +10,7 @@ from lightning import seed_everything
 logger = logging.getLogger(__name__)
 
 @hydra.main(version_base= None, config_path="../configs", config_name="data_preparation")
-def render_data(cfg: DictConfig):
+def download_paths(cfg: DictConfig):
     seed_everything(cfg.seed)
     command = (
         # change python or python3
@@ -19,4 +19,4 @@ def render_data(cfg: DictConfig):
     subprocess.run(command, shell=True)
 
 if __name__ == "__main__":
-    render_data()
+    download_paths()

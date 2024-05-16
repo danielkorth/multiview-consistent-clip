@@ -28,3 +28,10 @@ test-full: ## Run all tests
 
 train: ## Train the model
 	python src/train.py
+
+
+prepare_data:
+	python scripts/download_paths.py
+	python scripts/render_data.py
+	python scripts/get_vlm_embeddings.py +vlm='clip'
+	python scripts/generate_splits.py

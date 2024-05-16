@@ -13,12 +13,9 @@ rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
 from src.utils import (
     RankedLogger,
-    extras,
-    get_metric_value,
     instantiate_callbacks,
     instantiate_loggers,
     log_hyperparameters,
-    task_wrapper,
 )
 
 log = RankedLogger(__name__, rank_zero_only=True)
@@ -47,8 +44,8 @@ def train(cfg: DictConfig) -> None:
         "cfg": cfg,
         "datamodule": datamodule,
         "model": model,
-        # "callbacks": callbacks,
-        # "logger": logger,
+        "callbacks": callbacks,
+        "logger": logger,
         "trainer": trainer,
     }
 

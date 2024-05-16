@@ -1,10 +1,21 @@
 from typing import Any, Dict, List
 
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics.functional.pairwise import pairwise_cosine_similarity
 
+
+import matplotlib.pyplot as plt
+
+def save_cov_images(sim):
+    fig, ax = plt.subplots()
+    im = ax.imshow(sim)
+    fig.colorbar(im)
+    plt.imsave("temp2.png", sim)
+    return plt.imread("temp2.png")
 
 from src.models.components.loss_functions import loss_distance_between_image_pairs
 
@@ -16,6 +27,7 @@ class ViewInvariantEmbeddingModule(LightningModule):
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler = None,
         compile: bool = False,
+        temperature: int = 1
     ) -> None:
 
         super().__init__()
@@ -49,16 +61,41 @@ class ViewInvariantEmbeddingModule(LightningModule):
             distances between text and image embedding: torch.tensor (batch size, data points size)
         """
 
-        text_prompt_embeddings = batch["prompt_embedding"]
+
+        # references: 
+        ### CLIP paper (has a dummy implementation!!)
+        # https://towardsdatascience.com/simple-implementation-of-openai-clip-model-a-tutorial-ace6ff01d9f2
+        ### 
+
+        
+        text_embeddings = batch["prompt_embedding"]
+        text_size = text_embeddings.size()
+        
         distances = batch["distances"]
 
         original_img_embeddings = batch["image_embeddings"]
-        predicted_img_embeddings = self.forward(original_img_embeddings)
+        image_embeddings = self.forward(original_img_embeddings)
 
-        #Assuming datapoint size = 2, aka using 2 images per object.
-        # sim = pairwise_cosine_similarity(predicted_img_embeddings, reduction='sum')
-        sim = loss_distance_between_image_pairs(predicted_img_embeddings)
-        return sim
+        # repeat text_embeddings to fix size of image embeddings
+        text_embeddings = text_embeddings.unsqueeze(1).repeat(1, image_embeddings.shape[1], 1)
+
+        # reshape
+        text_embeddings = text_embeddings.reshape(-1, text_size[1])
+        image_embeddings = image_embeddings.reshape(-1, text_size[1])
+
+        
+        # Calculating the Loss
+        logits = (text_embeddings @ image_embeddings.T) / self.hparams['temperature']
+        cross_entropy = nn.CrossEntropyLoss(reduction='none')
+        texts_loss = cross_entropy(logits, targets)
+        images_loss = cross_entropy(logits.T, targets.T)
+        loss =  (images_loss + texts_loss) / 2.0 # shape: (batch_size)
+        return loss.mean()
+
+        # #Assuming datapoint size = 2, aka using 2 images per object.
+        # sim = pairwise_cosine_similarity(predicted_img_embeddings, reduction='mean')
+        # sim = loss_distance_between_image_pairs(predicted_img_embeddings)
+        # return sim, predicted_img_embeddings
 
     def training_step(
         self, batch: Dict[str, torch.tensor], batch_idx: int
@@ -72,9 +109,14 @@ class ViewInvariantEmbeddingModule(LightningModule):
         original_img_embeddings = batch["image_embeddings"]
         predicted_img_embeddings = self.forward(original_img_embeddings)
         sim = pairwise_cosine_similarity(predicted_img_embeddings[0], predicted_img_embeddings[0])
-        self.logger.log_image(key='heatmap', images=[sim])
         loss = self.model_step(batch)
+        self.logger.log_image(key='heatmap', images=[sim])
+        # should go down (learn mv consistency)
+        self.log("val/mean_cossim", sim.mean(), on_step=True, on_epoch=True, prog_bar=False)
+        self.log("val/std_cossim", sim.std(), on_step=True, on_epoch=True, prog_bar=True)
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+
+        # should not go down (dont unlearn)
 
     def test_step(self, batch: Dict[str, torch.tensor], batch_idx: int) -> None:
         loss = self.model_step(batch)
@@ -102,7 +144,7 @@ class ViewInvariantEmbeddingModule(LightningModule):
 
 
     def configure_optimizers(self) -> Dict[str, Any]:
-        optimizer = self.hparams.optimizer(params=self.trainer.model.parameters())
+        optimizer = self.hparams.optimizer(params=self.net.parameters())
         if self.hparams.scheduler is not None:
             scheduler = self.hparams.scheduler(optimizer=optimizer)
             return {
@@ -115,3 +157,4 @@ class ViewInvariantEmbeddingModule(LightningModule):
                 },
             }
         return {"optimizer": optimizer}
+    

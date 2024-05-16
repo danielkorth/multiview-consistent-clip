@@ -16,14 +16,13 @@ logger = logging.getLogger(__name__)
 @hydra.main(version_base= None, config_path="../configs", config_name="data_preparation")
 def render_data(cfg: DictConfig):
     seed_everything(cfg.seed)
-    # TODO update the json files by removing the ids that had a timeout during rendering
     start_time = time.time()
     with open(cfg.input_models_path, "r") as f:
         model_paths = json.load(f)
     for model_path in tqdm.tqdm(model_paths):
         command = (
             # for linux
-            # f"export DISPLAY=:0 && export SSL_CERT_DIR=/etc/ssl/certs &&"
+            f"export DISPLAY=:0 && export SSL_CERT_DIR=/etc/ssl/certs &&"
             # for windows
             f"blender -b -P {cfg.local.base_dir}/objaverse/blender_script.py --"
             f" --object_path {model_path}"

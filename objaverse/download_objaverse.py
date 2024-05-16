@@ -14,6 +14,10 @@ class Args:
     count: int
     """total number of files uploaded"""
 
+    # TODO add this shit here
+    category: str = None
+    """"""
+
     skip_completed: bool = False
     """whether to skip the files that have already been downloaded"""
 
@@ -47,13 +51,28 @@ if __name__ == "__main__":
 
     annotations = objaverse.load_annotations()
 
-    # sort by number of likes
-    sorted_annotations = sorted(annotations.items(), key=lambda item: item[1]['likeCount'], reverse=True)
 
-    limited_sorted_annotations = sorted_annotations[:args.count]
+    ############# HEURISTIC: NUMBER OF LIKES ##############
+    # sorted_annotations = sorted(annotations.items(), key=lambda item: item[1]['likeCount'], reverse=True)
+
+    # final_annotations = sorted_annotations[:args.count]
+
+    ############ HEURISTIC: all with category "drink-food" #################
+    category = 'food-drink'
+    category_keys = list()  
+    for key, value in annotations.items():
+        for cat in value['categories']:
+            if cat['name'] == category:
+                category_keys.append(key)
+
+    final_annotations = list()
+    for key in category_keys:
+        final_annotations.append((key, annotations[key]))
+    ################# HEURISTIC: all with category "drink-food" ###########
+
 
     uid_to_name = dict()
-    for uid, metadata in limited_sorted_annotations:
+    for uid, metadata in final_annotations:
         uid_to_name[uid] = metadata['name']
 
     object_paths = objaverse._load_object_paths()
