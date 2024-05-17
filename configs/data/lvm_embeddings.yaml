@@ -6,3 +6,4 @@ pin_memory: False
 
 train_split: train.csv
 val_split: val.csv
+test_split: test.csv

@@ -24,11 +24,8 @@ class RenderedImagesDataset(Dataset):
             for image_path in image_paths:
                 if image_path.endswith('.png'):
                     self.image_relative_paths.append(os.path.join(folder,image_path))
-        
-        # assert len(self.image_relative_paths) == self.expected_size, "Number of images is not as expected." 
+ 
         self.size = len(self.image_relative_paths)
-
-        self.expected_size = 36*2041 # 36 images per object. TODO: read from some metadata file
 
     def __len__(self) -> int:
         return self.size
@@ -45,5 +42,5 @@ class RenderedImagesDataset(Dataset):
 
         return {
            'image': image,
-           'path': image_relative_path
+           'path': str(image_relative_path)
         }

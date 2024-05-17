@@ -3,6 +3,7 @@ import torch
 import pandas as pd
 import os
 import json
+from pathlib import Path
 from typing import Dict, List
 import random
 import numpy as np
@@ -64,7 +65,7 @@ class LVMEmbeddingsDataset(Dataset):
         prompt_embedding_path = os.path.join(self.data_dir, "renderings", self.object_folders[idx], "clip_text_embed.pt") 
 
         image_embedding_paths = \
-            [os.path.join(self.data_dir, "renderings", self.object_folders[idx], 'clip_embed_' + str(embedding_idx).zfill(3) + ".pt") \
+            [Path(self.data_dir) / "renderings" / self.object_folders[idx] / Path('clip_embed_' + str(embedding_idx).zfill(3) + '.pt') \
             for embedding_idx in image_indices]
 
         prompt_embedding = torch.load(prompt_embedding_path)

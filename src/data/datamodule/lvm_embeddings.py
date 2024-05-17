@@ -22,13 +22,13 @@ class LVMEmbeddingsDataModule(L.LightningDataModule):
 
     def setup(self, stage: str) -> None: 
         if stage in ['fit', 'all']:
-            self.train_csv = os.path.join(self.hparams['data_dir'], self.hparams['train_split'])
+            self.train_csv =  self.hparams['train_split']
             self.train_dataset = LVMEmbeddingsDataset(self.hparams['data_dir'], self.train_csv)
         if stage in ['validate', 'fit', 'all']:
-            self.val_csv = os.path.join(self.hparams['data_dir'], self.hparams['val_split'])
+            self.val_csv = self.hparams['val_split']
             self.val_dataset = LVMEmbeddingsDataset(self.hparams['data_dir'], self.val_csv, mode='val')
         if stage in ['test', 'all']:
-            self.test_csv = os.path.join(self.hparams['data_dir'], 'test.csv')
+            self.test_csv = self.hparams['test_split']
             self.test_dataset = LVMEmbeddingsDataset(self.hparams['data_dir'], self.test_csv, mode='test')
   
     def train_dataloader(self) -> DataLoader: 
