@@ -28,6 +28,12 @@ def render_data(cfg: DictConfig):
             f" --object_path {model_path}"
             f" --output_dir {cfg.output_dir}/renderings"
         )
+        ## Use this for wsl. Modify path to the blender.exe
+        # command = (
+        #     f"/mnt/c/Program\ Files/Blender\ Foundation/Blender\ 4.1/blender.exe -b -P {cfg.local.base_dir}/objaverse/blender_script.py --"
+        #     f" --object_path {model_path}"
+        #     f" --output_dir {cfg.output_dir}/renderings"
+        # )
         process = subprocess.Popen(command, shell=True)
         start_command_time = time.time()
         while True:

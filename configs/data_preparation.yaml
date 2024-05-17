@@ -12,3 +12,5 @@ num_objects: 12031
 train_split_size: 0.8
 val_split_size: 0.1
 test_split_size: 0.1
+
+use_small_dataset: False

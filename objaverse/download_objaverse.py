@@ -26,6 +26,10 @@ class Args:
 
     seed: int = 42
 
+    small: bool = False
+    """ download only the first 'count' objects, instead of downloading all then sorting."""
+
+
 
 def get_completed_uids():
     # get all the files in the objaverse-images bucket
@@ -49,26 +53,32 @@ if __name__ == "__main__":
 
     random.seed(args.seed)
 
-    annotations = objaverse.load_annotations()
+    if args.small:
+        uids = objaverse.load_uids()
+        uids_subset = uids[:args.count]
+        annotations = objaverse.load_annotations(uids=uids_subset)
+        final_annotations = sorted(annotations.items(), key=lambda item: item[1]['likeCount'], reverse=True)
 
+    else:
+        annotations = objaverse.load_annotations()
 
-    ############# HEURISTIC: NUMBER OF LIKES ##############
-    # sorted_annotations = sorted(annotations.items(), key=lambda item: item[1]['likeCount'], reverse=True)
+        ############# HEURISTIC: NUMBER OF LIKES ##############
+        # sorted_annotations = sorted(annotations.items(), key=lambda item: item[1]['likeCount'], reverse=True)
 
-    # final_annotations = sorted_annotations[:args.count]
+        # final_annotations = sorted_annotations[:args.count]
 
-    ############ HEURISTIC: all with category "drink-food" #################
-    category = 'food-drink'
-    category_keys = list()  
-    for key, value in annotations.items():
-        for cat in value['categories']:
-            if cat['name'] == category:
-                category_keys.append(key)
+        ############ HEURISTIC: all with category "drink-food" #################
+        category = 'food-drink'
+        category_keys = list()  
+        for key, value in annotations.items():
+            for cat in value['categories']:
+                if cat['name'] == category:
+                    category_keys.append(key)
 
-    final_annotations = list()
-    for key in category_keys:
-        final_annotations.append((key, annotations[key]))
-    ################# HEURISTIC: all with category "drink-food" ###########
+        final_annotations = list()
+        for key in category_keys:
+            final_annotations.append((key, annotations[key]))
+        ################# HEURISTIC: all with category "drink-food" ###########
 
 
     uid_to_name = dict()

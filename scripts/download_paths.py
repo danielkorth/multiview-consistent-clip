@@ -13,8 +13,10 @@ logger = logging.getLogger(__name__)
 def download_paths(cfg: DictConfig):
     seed_everything(cfg.seed)
     command = (
-        # change python or python3
-        f"python {cfg.local.base_dir}/objaverse/download_objaverse.py --count {cfg.num_objects} --save_json_path {cfg.output_dir}"
+        f"python {cfg.local.base_dir}/objaverse/download_objaverse.py "
+        f"--count {cfg.num_objects} "
+        f"--save_json_path {cfg.output_dir} "
+        f"{'--small' if cfg.use_small_dataset else ''}"
     )
     subprocess.run(command, shell=True)
 
