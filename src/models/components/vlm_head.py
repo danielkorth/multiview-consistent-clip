@@ -1,5 +1,3 @@
-#create simple endocer
-
 import torch
 from torch import nn
 

@@ -5,38 +5,31 @@ from lightning import LightningModule
 from torchmetrics import MeanMetric
 
 
-from src.models.components.vlm_head import VLMHead
-from src.models.components.loss_functions import loss_distance_between_image_pairs, loss_autoencoder_embedding
+from src.models.components.vlm_autoencoder import VLMAutoencoder
+from src.models.components.loss_functions import loss_autoencoder_embedding
 
 class ViewComprehensiveEmbeddingModule(LightningModule):
 
     def __init__(
         self,
+        net: VLMAutoencoder,
+        optimizer: torch.optim.Optimizer,
+        scheduler: torch.optim.lr_scheduler = None,
+        compile: bool = False,
     ) -> None:
 
         super().__init__()
-
         self.save_hyperparameters(logger=False)
 
-        self.view_invariant_head = VLMHead()
-        self.view_dependent_head = VLMHead()
+        self.net = net
 
         self.train_loss = MeanMetric()
         self.val_loss = MeanMetric()
         self.test_loss = MeanMetric()
 
-    def forward(self, img_embeddings: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """ img_embeddings: torch.tensor (batch size, data points size, embedding size)"""
-        #TODO perform reshaping
-        vi_embedding = self.view_invariant_head(img_embeddings)
-        vd_embedding = self.view_dependent_head(img_embeddings)
-
-        view_comprehensive_embedding = vi_embedding + vd_embedding
-
-        return view_comprehensive_embedding, vi_embedding
 
     def model_step(
-        self, batch: Dict[torch.tensor, torch.tensor, torch.tensor]
+        self, batch: Dict[str, torch.tensor]
     ) -> torch.Tensor:
         
         """
@@ -45,51 +38,34 @@ class ViewComprehensiveEmbeddingModule(LightningModule):
             original_img_embeddings: torch.tensor (batch size, data points size, embedding size)}
             distances between text and image embedding: torch.tensor (batch size, data points size)
         """
-        
-        # text_prompt_embeddings = batch["text_prompt_embedding"]
-        # distances = batch["distances"]
-        # batch_size, data_points_size, embedding_size = original_img_embeddings.size()
+    
+        original_img_embeddings = batch["image_embeddings"]
+        view_comprehensive_decodings, view_independent_encodings = self.net.forward(original_img_embeddings)
 
-        original_img_embeddings = batch["original_img_embeddings"]
-        view_comprehensive_decodings, view_independent_encodings = self.forward(original_img_embeddings)
-
-        loss_auto = loss_autoencoder_embedding(original_img_embeddings, view_comprehensive_decodings)
-        loss_vi = loss_distance_between_image_pairs(view_independent_encodings)
-        
-        return loss_auto + loss_vi
+        return loss_autoencoder_embedding(original_img_embeddings, view_comprehensive_decodings, view_independent_encodings)
 
     def training_step(
-        self, batch: Dict[torch.tensor, List[torch.tensor]], batch_idx: int
+        self, batch: Dict[str, torch.tensor], batch_idx: int
     ) -> torch.Tensor:
 
-        loss = self.model_step(batch)
-        self.train_loss.update(loss)
-        self.log("train/loss", self.train_loss.compute(), on_step=False, on_epoch=True, prog_bar=True)
+        loss, loss_auto, loss_vi = self.model_step(batch)
+        self.log("train/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/loss_auto", loss_auto, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("train/loss_vi", loss_vi, on_step=False, on_epoch=True, prog_bar=True)
 
         return loss
 
-    def validation_step(self, batch: Dict[torch.tensor, List[torch.tensor]], batch_idx: int) -> None:
-        loss = self.model_step(batch)
-        self.val_loss.update(loss)
-        self.log("val/loss", self.val_loss.compute(), on_step=False, on_epoch=True, prog_bar=True)
+    def validation_step(self, batch: Dict[str, torch.tensor], batch_idx: int) -> None:
+        loss, loss_auto, loss_vi = self.model_step(batch)
+        self.log("val/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/loss_auto", loss_auto, on_step=False, on_epoch=True, prog_bar=True)
+        self.log("val/loss_vi", loss_vi, on_step=False, on_epoch=True, prog_bar=True)
 
-    def test_step(self, batch: Dict[torch.tensor, List[torch.tensor]], batch_idx: int) -> None:
+    def test_step(self, batch: Dict[str, torch.tensor], batch_idx: int) -> None:
         loss= self.model_step(batch)
 
         self.test_loss.update(loss)
         self.log("test/loss", self.test_loss.compute(), on_step=False, on_epoch=True, prog_bar=True)
-
-    def on_train_epoch_end(self) -> None:
-        "Lightning hook that is called when a training epoch ends."
-        pass
-
-    def on_train_start(self) -> None:
-        "Lightning hook that is called when training starts."
-        pass
-
-    def on_test_epoch_end(self) -> None:
-        """Lightning hook that is called when a test epoch ends."""
-        pass
 
     def setup(self, stage: str) -> None:
         """Lightning hook that is called at the beginning of fit (train + validate), validate,
@@ -100,8 +76,21 @@ class ViewComprehensiveEmbeddingModule(LightningModule):
 
         :param stage: Either `"fit"`, `"validate"`, `"test"`, or `"predict"`.
         """
-        raise NotImplementedError
+        if self.hparams.compile and stage == "fit":
+            self.net = torch.compile(self.net)
 
     def configure_optimizers(self) -> Dict[str, Any]:
-        optimizer = torch.optim.SGD(self.net.parameters(), lr=1e-3)
+
+        optimizer = self.hparams.optimizer(params=self.net.paramters())
+        if self.hparams.scheduler is not None:
+            scheduler = self.hparams.scheduler(optimizer=optimizer)
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
+                    "scheduler": scheduler,
+                    "monitor": "val/loss",
+                    "interval": "epoch",
+                    "frequency": 1,
+                },
+            }
         return {"optimizer": optimizer}

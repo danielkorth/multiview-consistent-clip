@@ -1,0 +1,29 @@
+_target_: src.models.view_comprehensive.ViewComprehensiveEmbeddingModule
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.001
+  weight_decay: 0.0
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 10
+
+net:
+  _target_: src.models.components.vlm_autoencoder.VLMAutoencoder
+
+  encoder_input_size:  512
+  encoder_hidden_size:  128
+  encoder_n_hidden_layers:  3
+  encoder_output_size:  128
+  decoder_input_size:  128
+  decoder_hidden_size:  128
+  decoder_n_hidden_layers:  3
+  decoder_output_size:  512
+
+# compile model for faster training with pytorch 2.0
+compile: false

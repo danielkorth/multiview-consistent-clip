@@ -4,6 +4,31 @@ import numpy as np
 
 from torchmetrics.functional.pairwise import pairwise_cosine_similarity
 
+
+def loss_autoencoder_embedding(
+        original_img_embeddings: torch.tensor,
+        decoded_img_embeddings: torch.tensor,
+        encoded_vi_img_embeddings: torch.tensor
+    ) -> torch.tensor:
+    """Compute loss for autoencoder embeddings.
+    
+    original_img_embeddings: torch.tensor (batch size, data points size, vlm embedding size)}
+    decoded_img_embeddings: torch.tensor (batch size, data points size, vlm embedding size)}
+    encoded_vi_img_embeddings: torch.tensor (batch size, data points size, vi embedding size)}"""
+
+    batch_size, datapoint_size, vlm_embedding_size = original_img_embeddings.shape  
+    
+    loss_auto = torch.norm(original_img_embeddings - decoded_img_embeddings, dim=-1).sum()
+    
+    loss_vi = 0
+    for batch_idx in range(batch_size):
+        sim = pairwise_cosine_similarity(encoded_vi_img_embeddings[batch_idx])
+        loss_vi += torch.triu(sim, diagonal=1).sum()
+
+    loss = loss_auto - loss_vi
+
+    return loss, loss_auto, loss_vi
+
 def loss_contrastive(
         text_embeddings: torch.tensor,
         predicted_img_embeddings: torch.tensor
