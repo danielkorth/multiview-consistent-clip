@@ -4,21 +4,9 @@ from src.data.dataset.lvm_embeddings import LVMEmbeddingsDataset
 import os
 
 class LVMEmbeddingsDataModule(L.LightningDataModule): 
-    def __init__(
-            self,  
-            data_dir: str,
-            batch_size: int,
-            shuffle: bool = True,
-            num_workers: int = 1,
-            pin_memory: bool = False,
-            train_split: str = 'train.csv',
-            val_split: str = 'val.csv',
-            **kwargs) -> None:
+    def __init__(self, **kwargs) -> None:
         super().__init__()
-
         self.save_hyperparameters(logger=False)
-
-        print(self.hparams.num_workers)
 
     def setup(self, stage: str) -> None: 
         if stage in ['fit', 'all']:

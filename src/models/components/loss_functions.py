@@ -1,21 +1,7 @@
 import torch
 from typing import List
 
-def loss_distance_between_image_pairs(
-        predicted_img_embeddings: torch.tensor
-    ) -> torch.tensor:
-    """
-    Compute distance between each image pair.
-    
-    predicted_img_embeddings: torch.tensor (batch size, 2, embedding size)
-        
-    """
-
-    diff = predicted_img_embeddings[:, 0, :] - predicted_img_embeddings[:, 1, :]
-    distance = torch.norm(diff, dim=-1)
-    loss = torch.sum(distance)
-
-    return loss
+from torchmetrics.functional.pairwise import pairwise_cosine_similarity
 
 
 def loss_view_invariant_embedding_for_2_images(
@@ -89,3 +75,29 @@ def loss_autoencoder_embedding(
 
     return loss
 
+def loss_contrastive(
+        text_embeddings: torch.tensor,
+        predicted_img_embeddings: torch.tensor
+    ) -> torch.tensor:
+    """
+    text_embeddings: torch.tensor (batch size, embedding size), 
+    img_embeddings: torch.tensor (batch size, data points size, embedding size)
+    """
+    batch_size, datapoint_size, embedding_size = predicted_img_embeddings.shape
+    combined_embeddings = torch.cat((text_embeddings.unsqueeze(1), predicted_img_embeddings), dim=1)
+    
+    # TODO can concatenate to avoid looping over the batch.
+    loss_similarity = 0
+    for batch_idx in range(batch_size):
+        sim =  pairwise_cosine_similarity(combined_embeddings[batch_idx])
+        loss_similarity += torch.triu(sim, diagonal=1).sum()
+
+    loss_dissimilarity = 0
+    for batch_idx in range(batch_size):
+        for nested_batch_idx in range (batch_idx, batch_size):
+            sim = pairwise_cosine_similarity(combined_embeddings[batch_idx], combined_embeddings[nested_batch_idx])
+            loss_dissimilarity += sim[1:].sum() 
+
+    loss = loss_dissimilarity - loss_similarity
+
+    return loss, loss_similarity, loss_dissimilarity

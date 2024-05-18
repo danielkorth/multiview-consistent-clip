@@ -7,6 +7,8 @@ from lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics.functional.pairwise import pairwise_cosine_similarity
 
+from src.models.components.loss_functions import loss_contrastive
+
 
 import matplotlib.pyplot as plt
 
@@ -16,8 +18,6 @@ def save_cov_images(sim):
     fig.colorbar(im)
     plt.imsave("temp2.png", sim)
     return plt.imread("temp2.png")
-
-from src.models.components.loss_functions import loss_distance_between_image_pairs
 
 class ViewInvariantEmbeddingModule(LightningModule):
 
@@ -67,30 +67,31 @@ class ViewInvariantEmbeddingModule(LightningModule):
         # https://towardsdatascience.com/simple-implementation-of-openai-clip-model-a-tutorial-ace6ff01d9f2
         ### 
 
-        
         text_embeddings = batch["prompt_embedding"]
-        text_size = text_embeddings.size()
-        
-        distances = batch["distances"]
-
         original_img_embeddings = batch["image_embeddings"]
-        image_embeddings = self.forward(original_img_embeddings)
+        predicted_image_embeddings = self.forward(original_img_embeddings)
 
-        # repeat text_embeddings to fix size of image embeddings
-        text_embeddings = text_embeddings.unsqueeze(1).repeat(1, image_embeddings.shape[1], 1)
+        return loss_contrastive(text_embeddings, predicted_image_embeddings)
 
-        # reshape
-        text_embeddings = text_embeddings.reshape(-1, text_size[1])
-        image_embeddings = image_embeddings.reshape(-1, text_size[1])
+        # ----- Daniel's implementation -----
+
+        # # repeat text_embeddings to fix size of image embeddings
+        # text_embeddings = text_embeddings.unsqueeze(1).repeat(1, image_embeddings.shape[1], 1)
+
+        # # reshape
+        # text_embeddings = text_embeddings.reshape(-1, text_size[1])
+        # image_embeddings = image_embeddings.reshape(-1, text_size[1])
 
         
-        # Calculating the Loss
-        logits = (text_embeddings @ image_embeddings.T) / self.hparams['temperature']
-        cross_entropy = nn.CrossEntropyLoss(reduction='none')
-        texts_loss = cross_entropy(logits, targets)
-        images_loss = cross_entropy(logits.T, targets.T)
-        loss =  (images_loss + texts_loss) / 2.0 # shape: (batch_size)
-        return loss.mean()
+        # # Calculating the Loss
+        # logits = (text_embeddings @ image_embeddings.T) / self.hparams['temperature']
+        # cross_entropy = nn.CrossEntropyLoss(reduction='none')
+        # texts_loss = cross_entropy(logits, targets)
+        # images_loss = cross_entropy(logits.T, targets.T)
+        # loss =  (images_loss + texts_loss) / 2.0 # shape: (batch_size)
+        # return loss.mean()
+
+        # ----- End of Daniel's implementation -----
 
         # #Assuming datapoint size = 2, aka using 2 images per object.
         # sim = pairwise_cosine_similarity(predicted_img_embeddings, reduction='mean')
@@ -100,26 +101,51 @@ class ViewInvariantEmbeddingModule(LightningModule):
     def training_step(
         self, batch: Dict[str, torch.tensor], batch_idx: int
     ) -> torch.Tensor:
-
-        loss = self.model_step(batch)
+        loss, loss_sim, loss_dissim = self.model_step(batch)
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log("train/loss_sim", loss_sim, on_step=True, on_epoch=True, prog_bar=True)
+        self.log("train/loss_dissim", loss_dissim, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch: Dict[str, torch.tensor], batch_idx: int) -> None:
+
         original_img_embeddings = batch["image_embeddings"]
-        predicted_img_embeddings = self.forward(original_img_embeddings)
-        sim = pairwise_cosine_similarity(predicted_img_embeddings[0], predicted_img_embeddings[0])
-        loss = self.model_step(batch)
-        self.logger.log_image(key='heatmap', images=[sim])
-        # should go down (learn mv consistency)
-        self.log("val/mean_cossim", sim.mean(), on_step=True, on_epoch=True, prog_bar=False)
-        self.log("val/std_cossim", sim.std(), on_step=True, on_epoch=True, prog_bar=True)
+        batch_size, data_points_size, embedding_size = original_img_embeddings.shape
+        predicted_image_embeddings = self.forward(original_img_embeddings)
+
+        loss_similarity = 0
+        for b in range(batch_size):
+            sim =  pairwise_cosine_similarity(predicted_image_embeddings[b])
+            loss_similarity += torch.triu(sim, diagonal=1).sum() / (data_points_size * (data_points_size - 1) / 2)
+        mean_loss_similarity = loss_similarity / batch_size
+
+        loss_dissimilarity = 0
+        for batch_idx in range(batch_size):
+            for nested_batch_idx in range (batch_idx, batch_size):
+                sim = pairwise_cosine_similarity(predicted_image_embeddings[batch_idx], predicted_image_embeddings[nested_batch_idx])
+                loss_dissimilarity += sim[1:].sum() / (data_points_size**2 + data_points_size)
+
+        mean_loss_dissimilarity = loss_dissimilarity / (batch_size * (batch_size + 1) / 2)
+
+        self.log("val/mean_loss_similarity", mean_loss_similarity, on_step=True, on_epoch=True, prog_bar=True)
+        self.log("val/mean_loss_dissimilarity", mean_loss_dissimilarity, on_step=True, on_epoch=True, prog_bar=True)
+
+        loss, loss_similarity, loss_dissimilarity = self.model_step(batch)
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
 
+        # TODO fix and uncomment
+
+        # sim = pairwise_cosine_similarity(predicted_img_embeddings[0], predicted_img_embeddings[0])
+        # self.logger.log_image(key='heatmap', images=[sim])
+
+        # should go down (learn mv consistency)
+        # self.log("val/mean_cossim", sim.mean(), on_step=True, on_epoch=True, prog_bar=False)
+        # self.log("val/std_cossim", sim.std(), on_step=True, on_epoch=True, prog_bar=True)
+        
         # should not go down (dont unlearn)
 
     def test_step(self, batch: Dict[str, torch.tensor], batch_idx: int) -> None:
-        loss = self.model_step(batch)
+        loss, loss_sim, loss_dissim = self.model_step(batch)
         self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
     # def on_train_epoch_end(self) -> None:

@@ -25,10 +25,11 @@ model:
   scheduler: null
 
 data:
-  batch_size: 8
+  batch_size: 3 #8
   num_workers: 2
   train_split: train_batch.csv
-  val_split: val_overfit.csv
+  val_split: val_batch.csv
+  shuffle: False
 
 callbacks:
   earlystopping: null
@@ -38,4 +39,4 @@ logger:
     tags: ${tags}
     group: "mvc-clip"
   aim:
-    experiment: "overfit_single"
+    experiment: "overfit_batch"

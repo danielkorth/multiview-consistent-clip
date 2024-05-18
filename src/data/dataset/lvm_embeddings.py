@@ -59,10 +59,9 @@ class LVMEmbeddingsDataset(Dataset):
         if self.mode == 'train':
             image_indices = random.sample(range(self.num_encodings_per_object), self.datapoint_size)
         else: 
-            image_indices = np.arange(self.max_datapoint_size)
+            image_indices = random.sample(range(self.num_encodings_per_object), self.datapoint_size) #np.arange(self.max_datapoint_size) #TODO revert this!
 
-        #TODO: change "clip_embed_000.pt" with name of prompt embedding file
-        prompt_embedding_path = os.path.join(self.data_dir, "renderings", self.object_folders[idx], "clip_text_embed.pt") 
+        prompt_embedding_path = Path(self.data_dir) / "renderings" / self.object_folders[idx] / "clip_text_embed.pt"
 
         image_embedding_paths = \
             [Path(self.data_dir) / "renderings" / self.object_folders[idx] / Path('clip_embed_' + str(embedding_idx).zfill(3) + '.pt') \
