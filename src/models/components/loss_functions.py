@@ -25,9 +25,11 @@ def loss_autoencoder_embedding(
         sim = pairwise_cosine_similarity(encoded_vi_img_embeddings[batch_idx])
         loss_vi += torch.triu(sim, diagonal=1).sum()
 
-    loss = loss_auto - loss_vi
+    loss_auto_normalized = loss_auto / (batch_size * datapoint_size)
+    loss_vi_normalized = loss_vi / (batch_size * datapoint_size * (datapoint_size + 1) / 2)
+    loss = loss_auto_normalized - loss_vi_normalized
 
-    return loss, loss_auto, loss_vi
+    return loss, loss_auto_normalized, loss_vi_normalized
 
 def loss_contrastive(
         text_embeddings: torch.tensor,
