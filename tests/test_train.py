@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+import torch
+import numpy as np
 
 import pytest
 from hydra.core.hydra_config import HydraConfig
@@ -9,25 +11,59 @@ import pytorch_lightning as pl
 from src.train_demo import train
 from tests.helpers.run_if import RunIf
 
-from src.models.view_invariant import ViewInvariantEmbeddingModule
-from src.data.datamodule.lvm_embeddings import LVMEmbeddingsDataModule
+from torchmetrics.functional.pairwise import pairwise_cosine_similarity
 
 
 
-def test_train_vlm_head()->None:
+def test_loss():
 
-    model = ViewInvariantEmbeddingModule()
-    print('Model is initialized.')
+    # --- input ----
+    text_embeddings = torch.stack([
+        torch.ones(4) * 1,
+        torch.ones(4) * 2
+    ])
 
-    data_module = LVMEmbeddingsDataModule(
-        data_dir = 'C:\\Users\\Hannah\\sw\\multiview-robust-clip\\data\\objaverse',
-        training_stage = 'overfit_on_batch')
-    print('Data module is initialized.')
+    # Create image embedding tensor with shape (batch_size, datapoint_size, embedding_size)
+    predicted_img_embeddings = torch.stack([
+        torch.stack([
+            torch.ones(4) * 10,
+            torch.ones(4) * 20,
+            torch.ones(4) * 30,
+        ]),
+        torch.stack([
+            torch.tensor([3,4,5,6]), #torch.ones(4) * 100,
+            torch.ones(4) * 200,
+            torch.ones(4) * 300,
+        ])
+    ])
 
-    trainer = pl.Trainer(max_epochs=4) 
-    print('Trainer is initialized.')
+    # -------
+    batch_size, datapoint_size, embedding_size = predicted_img_embeddings.shape
 
-    trainer.fit(model, data_module) 
+    al_embeddings = torch.cat((text_embeddings.unsqueeze(1), predicted_img_embeddings), dim=1) #shape (batch size, data points size + 1, embedding size)
+
+    print(f'al embeddings shape {al_embeddings.shape} \n {al_embeddings}')
+    permuted_embeddings = al_embeddings.permute(1, 0, 2) #shape (data points size + 1, batch size, embedding size)
+    print(f' permuted embeddings shape {permuted_embeddings.shape}\n {permuted_embeddings}')
+    permuted_embeddings_flat = permuted_embeddings.reshape(-1, embedding_size) #shape ((data points size + 1) * batch size, embedding size)
+
+    print(f' permuted embeddings flat shape {permuted_embeddings_flat.shape}\n {permuted_embeddings_flat}')
+    sim = pairwise_cosine_similarity(permuted_embeddings_flat)
+    print(f'sim mat \n {sim}')
+    
+    loss_sim = 0
+    loss_dissim = 0
+
+    sim_indexes = np.arange(batch_size, datapoint_size*batch_size + batch_size, datapoint_size)
+    print(f'sim indexes {sim_indexes}')
+    for i in sim_indexes:
+        print(f'sim diag {sim.diagonal(i)}')
+
+    for i in range(1, datapoint_size*batch_size + batch_size):
+        if i in sim_indexes:
+            loss_sim += sim.diagonal(i).sum()
+        else:
+            loss_dissim += sim.diagonal(i).sum()
 
 
 def test_train_fast_dev_run(cfg_train: DictConfig) -> None:

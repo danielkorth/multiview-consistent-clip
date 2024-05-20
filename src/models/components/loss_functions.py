@@ -1,5 +1,6 @@
 import torch
 from typing import List
+import numpy as np
 
 from torchmetrics.functional.pairwise import pairwise_cosine_similarity
 
@@ -84,24 +85,26 @@ def loss_contrastive(
     img_embeddings: torch.tensor (batch size, data points size, embedding size)
     """
     batch_size, datapoint_size, embedding_size = predicted_img_embeddings.shape
-    combined_embeddings = torch.cat((text_embeddings.unsqueeze(1), predicted_img_embeddings), dim=1)
-    
-    # TODO can concatenate to avoid looping over the batch.
-    loss_similarity = 0
-    loss_dissimilarity = 0
 
-    for batch_idx in range(batch_size):
-        sim =  pairwise_cosine_similarity(combined_embeddings[batch_idx])
-        loss_similarity += torch.triu(sim, diagonal=1).sum()
+    al_embeddings = torch.cat((text_embeddings.unsqueeze(1), predicted_img_embeddings), dim=1) #shape (batch size, data points size + 1, embedding size)
+    permuted_embeddings = al_embeddings.permute(1, 0, 2) #shape (data points size + 1, batch size, embedding size)
+    permuted_embeddings = permuted_embeddings.reshape(-1, embedding_size) #shape ((data points size + 1) * batch size, embedding size)
 
-    for batch_idx in range(batch_size):
-        for nested_batch_idx in range (batch_idx + 1, batch_size):
-            dissim = pairwise_cosine_similarity(combined_embeddings[batch_idx], combined_embeddings[nested_batch_idx])
-            loss_dissimilarity += dissim[:, 1:].sum() 
+    sim = pairwise_cosine_similarity(permuted_embeddings)
 
-    loss_sim_normalized = loss_similarity / (batch_size * (datapoint_size * (datapoint_size + 1) / 2))
-    loss_dissim_normalized = 0 if batch_size == 1 else loss_dissimilarity / (datapoint_size * (datapoint_size + 1) * batch_size * (batch_size - 1) / 2)
+    loss_sim = 0
+    loss_dissim = 0
 
+    sim_indexes = np.arange(batch_size, datapoint_size*batch_size + batch_size, datapoint_size)
+    for i in range(1, datapoint_size*batch_size + batch_size):
+        if i in sim_indexes:
+            loss_sim += sim.diagonal(i).sum()
+        else:
+            loss_dissim += sim.diagonal(i).sum()
+        
+    weight_similarity = 1 #TODO make this a hyperparameter whenwe know how we want it to be
+    loss_sim_normalized = loss_sim / (batch_size * (datapoint_size * (datapoint_size + 1) / 2))
+    loss_dissim_normalized = 0 if batch_size == 1 else loss_dissim / (datapoint_size * (datapoint_size + 1) * batch_size * (batch_size - 1) / 2)
 
     weight_similarity = 0.5 #TODO make this a hyperparameter whenwe know how we want it to be
     loss = (1-weight_similarity)*loss_dissim_normalized - weight_similarity*loss_sim_normalized
