@@ -88,23 +88,22 @@ def loss_contrastive(
     
     # TODO can concatenate to avoid looping over the batch.
     loss_similarity = 0
+    loss_dissimilarity = 0
+
     for batch_idx in range(batch_size):
         sim =  pairwise_cosine_similarity(combined_embeddings[batch_idx])
         loss_similarity += torch.triu(sim, diagonal=1).sum()
 
-    loss_dissimilarity = 0
     for batch_idx in range(batch_size):
         for nested_batch_idx in range (batch_idx + 1, batch_size):
-            sim = pairwise_cosine_similarity(combined_embeddings[batch_idx], combined_embeddings[nested_batch_idx])
-            loss_dissimilarity += sim[:, 1:].sum() 
+            dissim = pairwise_cosine_similarity(combined_embeddings[batch_idx], combined_embeddings[nested_batch_idx])
+            loss_dissimilarity += dissim[:, 1:].sum() 
 
-    weight_similarity = 0.9 #TODO make this a hyperparameter whenwe know how we want it to be
     loss_sim_normalized = loss_similarity / (batch_size * (datapoint_size * (datapoint_size + 1) / 2))
-    if batch_size == 1:
-        loss_dissim_normalized = 0
-    else:
-        loss_dissim_normalized = loss_dissimilarity / (datapoint_size * (datapoint_size - 1) * batch_size * (batch_size - 1) / 2)
+    loss_dissim_normalized = 0 if batch_size == 1 else loss_dissimilarity / (datapoint_size * (datapoint_size + 1) * batch_size * (batch_size - 1) / 2)
 
+
+    weight_similarity = 0.5 #TODO make this a hyperparameter whenwe know how we want it to be
     loss = (1-weight_similarity)*loss_dissim_normalized - weight_similarity*loss_sim_normalized
 
     return loss, loss_sim_normalized, loss_dissim_normalized
