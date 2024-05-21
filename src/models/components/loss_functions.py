@@ -95,7 +95,7 @@ def loss_contrastive(
     loss_sim = 0
     loss_dissim = 0
 
-    sim_indexes = np.arange(batch_size, datapoint_size*batch_size + batch_size, datapoint_size)
+    sim_indexes = np.arange(batch_size, datapoint_size*batch_size + batch_size, batch_size)
     for i in range(1, datapoint_size*batch_size + batch_size):
         if i in sim_indexes:
             loss_sim += sim.diagonal(i).sum()

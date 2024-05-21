@@ -12,6 +12,7 @@ from src.train_demo import train
 from tests.helpers.run_if import RunIf
 
 from torchmetrics.functional.pairwise import pairwise_cosine_similarity
+import torch.nn.functional as F
 
 
 
@@ -19,19 +20,19 @@ def test_loss():
 
     # --- input ----
     text_embeddings = torch.stack([
-        torch.ones(4) * 1,
+        torch.tensor([1,2,3,4]),
         torch.ones(4) * 2
     ])
 
     # Create image embedding tensor with shape (batch_size, datapoint_size, embedding_size)
     predicted_img_embeddings = torch.stack([
         torch.stack([
-            torch.ones(4) * 10,
-            torch.ones(4) * 20,
-            torch.ones(4) * 30,
+            torch.tensor([1,2,3,4]),
+            torch.tensor([1,2,3,4]),
+            torch.tensor([1,2,3,4]),
         ]),
         torch.stack([
-            torch.tensor([3,4,5,6]), #torch.ones(4) * 100,
+            torch.ones(4) * 100,
             torch.ones(4) * 200,
             torch.ones(4) * 300,
         ])
@@ -42,6 +43,7 @@ def test_loss():
 
     al_embeddings = torch.cat((text_embeddings.unsqueeze(1), predicted_img_embeddings), dim=1) #shape (batch size, data points size + 1, embedding size)
 
+
     print(f'al embeddings shape {al_embeddings.shape} \n {al_embeddings}')
     permuted_embeddings = al_embeddings.permute(1, 0, 2) #shape (data points size + 1, batch size, embedding size)
     print(f' permuted embeddings shape {permuted_embeddings.shape}\n {permuted_embeddings}')
@@ -51,10 +53,14 @@ def test_loss():
     sim = pairwise_cosine_similarity(permuted_embeddings_flat)
     print(f'sim mat \n {sim}')
     
+    # -------- Compute the similarity and dissimilarity losses using loops
+
     loss_sim = 0
     loss_dissim = 0
 
-    sim_indexes = np.arange(batch_size, datapoint_size*batch_size + batch_size, datapoint_size)
+    print(f'batch size {batch_size}, datapoint size {datapoint_size}')
+
+    sim_indexes = np.arange(batch_size, datapoint_size*batch_size + batch_size, batch_size)
     print(f'sim indexes {sim_indexes}')
     for i in sim_indexes:
         print(f'sim diag {sim.diagonal(i)}')
@@ -64,6 +70,22 @@ def test_loss():
             loss_sim += sim.diagonal(i).sum()
         else:
             loss_dissim += sim.diagonal(i).sum()
+
+    print(f'loss sim {loss_sim}')
+    print(f'loss dissim {loss_dissim}')
+
+
+    ## -------- Compute the similarity and dissimilarity losses without using loops
+
+    dim = batch_size + batch_size * datapoint_size
+    num_diagonls = 2*dim -1
+
+    w = torch.eye(dim).unsqueeze(0)
+    print(f'w shape {w.shape}, \n {w}')
+    # from after conv2d result, extract inner inner dim, then take the middle column
+    result = F.conv2d(sim, w, padding=num_diagonls//2)#[0][0][:, num_diagonls//2]
+
+    print(f'result shape {result.shape}, \n {result}')
 
 
 def test_train_fast_dev_run(cfg_train: DictConfig) -> None:
