@@ -11,13 +11,13 @@ class LVMEmbeddingsDataModule(L.LightningDataModule):
     def setup(self, stage: str) -> None: 
         if stage in ['fit', 'all']:
             self.train_csv =  self.hparams['train_split']
-            self.train_dataset = LVMEmbeddingsDataset(self.hparams['data_dir'], self.train_csv)
+            self.train_dataset = LVMEmbeddingsDataset(self.hparams['data_dir'], self.train_csv, datapoint_size=self.hparams['datapoint_size'])
         if stage in ['validate', 'fit', 'all']:
             self.val_csv = self.hparams['val_split']
-            self.val_dataset = LVMEmbeddingsDataset(self.hparams['data_dir'], self.val_csv, mode='val')
+            self.val_dataset = LVMEmbeddingsDataset(self.hparams['data_dir'], self.val_csv, mode='val', datapoint_size=self.hparams['datapoint_size'])
         if stage in ['test', 'all']:
             self.test_csv = self.hparams['test_split']
-            self.test_dataset = LVMEmbeddingsDataset(self.hparams['data_dir'], self.test_csv, mode='test')
+            self.test_dataset = LVMEmbeddingsDataset(self.hparams['data_dir'], self.test_csv, mode='test', datapoint_size=self.hparams['datapoint_size'])
   
     def train_dataloader(self) -> DataLoader: 
         return DataLoader(self.train_dataset, batch_size=self.hparams['batch_size'], shuffle=self.hparams['shuffle'], num_workers=self.hparams['num_workers'], pin_memory=self.hparams['pin_memory']) 

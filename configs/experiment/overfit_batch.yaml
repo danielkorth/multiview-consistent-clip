@@ -30,6 +30,7 @@ data:
   train_split: train_batch.csv
   val_split: val_batch.csv
   shuffle: False
+  datapoint_size: 6
 
 callbacks:
   earlystopping: null
