@@ -1,6 +1,7 @@
 _target_: src.data.datamodule.lvm_embeddings.LVMEmbeddingsDataModule
 data_dir: ${local.objaverse_dir}
 batch_size: 1024 # Needs to be divisible by the number of devices (e.g., if in a distributed setup)
+datapoint_size: 6
 num_workers: 1
 pin_memory: False
 

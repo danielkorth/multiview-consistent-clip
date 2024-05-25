@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+import torch
+import numpy as np
 
 import pytest
 from hydra.core.hydra_config import HydraConfig
@@ -9,25 +11,154 @@ import pytorch_lightning as pl
 from src.train_demo import train
 from tests.helpers.run_if import RunIf
 
-from src.models.view_invariant import ViewInvariantEmbeddingModule
-from src.data.datamodule.lvm_embeddings import LVMEmbeddingsDataModule
+from torchmetrics.functional.pairwise import pairwise_cosine_similarity
+import torch.nn.functional as F
+
+from src.models.components.loss_functions import loss_contrastive
+
+
+import torch
+
+def sum_all_diagonal_matrix(mat: torch.tensor): 
+    n,_ = mat.shape
+    zero_mat = torch.zeros((n, n)) # Zero matrix used for padding
+    mat_padded =  torch.cat((zero_mat, mat, zero_mat), 1) # pads the matrix on left and right
+    mat_strided = mat_padded.as_strided((n, 2*n), (3*n + 1, 1)) # Change the strides
+    # print(mat_strided)
+    sum_diags = torch.sum(mat_strided, 0) # Sums the resulting matrix's columns
+    return sum_diags[1:]
+
+def test_sum_all_diagonal_matrix():
+
+    dim = 7
+    X = torch.arange(dim*dim).reshape(dim, dim)
+    # print(X)
+    # tensor([[0, 1, 2],
+    #        [3, 4, 5],
+    #        [6, 7, 8]]) 
+    print(f'num diags  {len(sum_all_diagonal_matrix(X))}')
+    # tensor([ 6., 10., 12.,  6.,  2.])
+
+def new_loss(text_embeddings, predicted_img_embeddings):
+
+    batch_size, datapoint_size, embedding_size = predicted_img_embeddings.shape
+
+    al_embeddings = torch.cat((text_embeddings.unsqueeze(1), predicted_img_embeddings), dim=1) #shape (batch size, data points size + 1, embedding size)
+    permuted_embeddings = al_embeddings.permute(1, 0, 2) #shape (data points size + 1, batch size, embedding size)
+    permuted_embeddings = permuted_embeddings.reshape(-1, embedding_size) #shape ((data points size + 1) * batch size, embedding size)
+
+    sim = pairwise_cosine_similarity(permuted_embeddings)
+
+    diag_sums = sum_all_diagonal_matrix(sim)
+
+    dim = batch_size + batch_size * datapoint_size #dim of sim matrix
+    similarity_indexes = np.arange(batch_size, dim, batch_size) #index of diagonals with sim score
+    sim_mask = torch.zeros(dim)
+    sim_mask[similarity_indexes] = 1
+    dissim_mask = 1 - sim_mask	
+
+    shifted_sim_mask = torch.cat((torch.zeros(dim-1), sim_mask))
+    shifted_dissim_mask = torch.cat((torch.zeros(dim-1), dissim_mask))
+
+    similarity_scores = diag_sums * shifted_sim_mask
+    similarity_score_summed = torch.sum(similarity_scores)
+
+    dissimilarity_scores = diag_sums * shifted_dissim_mask
+    dissimilarity_score_summed = torch.sum(dissimilarity_scores)
+
+    return similarity_score_summed, dissimilarity_score_summed
+
+def test_new_loss():
+     # --- input ----
+    text_embeddings = torch.stack([
+        torch.tensor([1,2,3,4]),
+        torch.ones(4) * 2
+    ])
+
+    # Create image embedding tensor with shape (batch_size, datapoint_size, embedding_size)
+    predicted_img_embeddings = torch.stack([
+        torch.stack([
+            torch.tensor([1,2,3,4]),
+            torch.tensor([1,2,3,4]),
+            torch.tensor([1,2,3,4]),
+        ]),
+        torch.stack([
+            torch.ones(4) * 100,
+            torch.ones(4) * 200,
+            torch.ones(4) * 300,
+        ])
+    ])
+
+    loss_sim, loss_dissim = new_loss(text_embeddings, predicted_img_embeddings)
 
 
 
-def test_train_vlm_head()->None:
+def test_loss():
 
-    model = ViewInvariantEmbeddingModule()
-    print('Model is initialized.')
+    # --- input ----
+    text_embeddings = torch.stack([
+        torch.tensor([1,2,3,4]),
+        torch.ones(4) * 2
+    ])
 
-    data_module = LVMEmbeddingsDataModule(
-        data_dir = 'C:\\Users\\Hannah\\sw\\multiview-robust-clip\\data\\objaverse',
-        training_stage = 'overfit_on_batch')
-    print('Data module is initialized.')
+    # Create image embedding tensor with shape (batch_size, datapoint_size, embedding_size)
+    predicted_img_embeddings = torch.stack([
+        torch.stack([
+            torch.tensor([1,2,3,4]),
+            torch.tensor([1,2,3,4]),
+            torch.tensor([1,2,3,4]),
+        ]),
+        torch.stack([
+            torch.ones(4) * 100,
+            torch.ones(4) * 200,
+            torch.ones(4) * 300,
+        ])
+    ])
 
-    trainer = pl.Trainer(max_epochs=4) 
-    print('Trainer is initialized.')
+    # -------
+    # -------- Compute the similarity and dissimilarity losses using loops
+    batch_size, datapoint_size, embedding_size = predicted_img_embeddings.shape
+    al_embeddings = torch.cat((text_embeddings.unsqueeze(1), predicted_img_embeddings), dim=1) #shape (batch size, data points size + 1, embedding size)
 
-    trainer.fit(model, data_module) 
+
+    permuted_embeddings = al_embeddings.permute(1, 0, 2) #shape (data points size + 1, batch size, embedding size)
+    permuted_embeddings_flat = permuted_embeddings.reshape(-1, embedding_size) #shape ((data points size + 1) * batch size, embedding size)
+
+    sim = pairwise_cosine_similarity(permuted_embeddings_flat)
+
+    # print(f'al embeddings shape {al_embeddings.shape} \n {al_embeddings}')
+    # print(f' permuted embeddings shape {permuted_embeddings.shape}\n {permuted_embeddings}')
+    # print(f' permuted embeddings flat shape {permuted_embeddings_flat.shape}\n {permuted_embeddings_flat}')
+    # print(f'sim mat \n {sim}')
+    
+    loss_sim = 0
+    loss_dissim = 0
+
+    print(f'batch size {batch_size}, datapoint size {datapoint_size}')
+
+    sim_indexes = np.arange(batch_size, datapoint_size*batch_size + batch_size, batch_size)
+
+    for i in range(1, datapoint_size*batch_size + batch_size):
+        if i in sim_indexes:
+            loss_sim += sim.diagonal(i).sum()
+        else:
+            loss_dissim += sim.diagonal(i).sum()
+
+    print(f'loss sim {loss_sim}')
+    print(f'loss dissim {loss_dissim}')
+
+    ## -------- Compute the similarity and dissimilarity losses without using loops
+
+    loss_sim, loss_dissim = new_loss(text_embeddings, predicted_img_embeddings)
+
+    print(f'loss sim {loss_sim}')
+    print(f'loss dissim {loss_dissim}')
+
+    ## -------- Compute loss and all with loss_contrastive
+
+    loss, sim_score, dissim_score= loss_contrastive(text_embeddings, predicted_img_embeddings)
+    print(f'loss sim {sim_score}')
+    print(f'loss dissim {dissim_score}')
 
 
 def test_train_fast_dev_run(cfg_train: DictConfig) -> None:

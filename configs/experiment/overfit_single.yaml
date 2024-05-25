@@ -25,7 +25,8 @@ model:
 
 data:
   batch_size: 1
-  num_workers: 16
+  datapoint_size: 6
+  num_workers: 2
   train_split: train_overfit.csv
   val_split: val_overfit.csv
   # TODO: should shuffle be here??
