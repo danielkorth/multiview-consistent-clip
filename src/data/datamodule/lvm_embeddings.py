@@ -4,7 +4,15 @@ from src.data.dataset.lvm_embeddings import LVMEmbeddingsDataset
 import os
 
 class LVMEmbeddingsDataModule(L.LightningDataModule): 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, 
+                train_split,
+                val_split,
+                test_split,
+                data_dir,
+                batch_size,
+                num_workers,
+                pin_memory,
+                **kwargs) -> None:
         super().__init__()
         self.save_hyperparameters(logger=False)
 

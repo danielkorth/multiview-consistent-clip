@@ -71,6 +71,8 @@ class ViewInvariantEmbeddingModule(LightningModule):
         original_img_embeddings = batch["image_embeddings"]
         predicted_image_embeddings = self.forward(original_img_embeddings)
 
+        # return ((predicted_image_embeddings - original_img_embeddings).mean(), 0, 0)
+
         return loss_contrastive(text_embeddings, predicted_image_embeddings)
 
         # ----- Daniel's implementation -----
@@ -102,9 +104,9 @@ class ViewInvariantEmbeddingModule(LightningModule):
         self, batch: Dict[str, torch.tensor], batch_idx: int
     ) -> torch.Tensor:
         loss, loss_sim, loss_dissim = self.model_step(batch)
-        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
-        self.log("train/loss_sim", loss_sim, on_step=True, on_epoch=True, prog_bar=True)
-        self.log("train/loss_dissim", loss_dissim, on_step=True, on_epoch=True, prog_bar=True)
+        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=False)
+        self.log("train/loss_sim", loss_sim, on_step=False, on_epoch=True, prog_bar=False)
+        self.log("train/loss_dissim", loss_dissim, on_step=False, on_epoch=True, prog_bar=False)
         return loss
 
     def validation_step(self, batch: Dict[str, torch.tensor], batch_idx: int) -> None:
@@ -127,8 +129,8 @@ class ViewInvariantEmbeddingModule(LightningModule):
 
         mean_loss_dissimilarity = loss_dissimilarity / (batch_size * (batch_size + 1) / 2)
 
-        self.log("val/mean_loss_similarity", mean_loss_similarity, on_step=True, on_epoch=True, prog_bar=True)
-        self.log("val/mean_loss_dissimilarity", mean_loss_dissimilarity, on_step=True, on_epoch=True, prog_bar=True)
+        self.log("val/mean_loss_similarity", mean_loss_similarity, on_step=False, on_epoch=True, prog_bar=False)
+        self.log("val/mean_loss_dissimilarity", mean_loss_dissimilarity, on_step=False, on_epoch=True, prog_bar=False)
 
         loss, loss_similarity, loss_dissimilarity = self.model_step(batch)
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)

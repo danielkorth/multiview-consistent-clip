@@ -12,31 +12,42 @@ defaults:
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["overfit"]
+tags: ["train_all"]
 
 seed: 42 
 
 trainer:
   min_epochs: 10
   max_epochs: 100
+  # num_sanity_val_steps: 0
+  devices: 1
+  check_val_every_n_epoch: 10
 
 model:
   scheduler: null
+  net:
+    _target_: src.models.components.vlm_head.VLMHead
+    input_size: 512 # based on CLIP 
+    hidden_size: 512
+    n_hidden_layers: 2 # number of hidden layers
+    output_size: 512
 
 data:
-  batch_size: 1
-  num_workers: 16
-  train_split: train_overfit.csv
-  val_split: val_overfit.csv
-  # TODO: should shuffle be here??
+  batch_size: 512 
+  num_workers: 0
+  pin_memory: False
+  train_split: train.csv
+  val_split: val.csv
   shuffle: False
 
 callbacks:
   earlystopping: null
+  model_checkpoint: 
+    every_n_epochs: 50
 
 logger:
   wandb:
     tags: ${tags}
     group: "mvc-clip"
   aim:
-    experiment: "overfit_single"
+    experiment: "overfit_batch"
