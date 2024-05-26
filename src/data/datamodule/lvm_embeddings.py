@@ -34,4 +34,5 @@ class LVMEmbeddingsDataModule(L.LightningDataModule):
         return DataLoader(self.val_dataset, batch_size=self.hparams['batch_size'], shuffle=False, num_workers=self.hparams['num_workers'], pin_memory=self.hparams['pin_memory'])
     
     def test_dataloader(self) -> DataLoader: 
-        return DataLoader(self.test_dataset, batch_size=self.hparams['batch_size'], shuffle=False, num_workers=self.hparams['num_workers'], pin_memory=self.hparams['pin_memory'])
+        # TODO resolve hardcode batchsize for now
+        return DataLoader(self.test_dataset, batch_size=206, shuffle=False, num_workers=self.hparams['num_workers'], pin_memory=self.hparams['pin_memory'])
