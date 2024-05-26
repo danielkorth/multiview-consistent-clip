@@ -1,32 +1,15 @@
-from typing import Any, Dict, List
+from typing import Any, Dict
 from pathlib import Path
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from lightning import LightningModule
-from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics.functional.pairwise import pairwise_cosine_similarity
-from src.models.components.losses import LossAutoencoder
+from src.utils.visualize import save_matrix_png
 
-import matplotlib.pyplot as plt
-
-def save_matrix_png(sim, path, type: str = 'mean'):
-    plt.figure(figsize=(10, 10))
-    plt.imshow(sim, cmap='hot', interpolation='nearest')
-    if type == 'mean':
-        plt.title('Mean Cosine Similarity')
-        plt.clim(0.5, 1)
-    else: 
-        plt.title('Std Cosine Similarity')
-        plt.clim(0, 0.4) 
-    plt.colorbar()
-    plt.savefig(path)
 
 class ViewInvariantEmbeddingModule(LightningModule):
     def __init__(
         self,
-
         net: torch.nn.Module,
         loss: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
@@ -116,7 +99,6 @@ class ViewInvariantEmbeddingModule(LightningModule):
     #     return 
 
     def test_step(self, batch: Dict[str, torch.tensor], batch_idx: int) -> None:
-
         text_embeddings = batch["prompt_embedding"]
         original_img_embeddings = batch["image_embeddings"]
         predicted_image_embeddings = self.forward(original_img_embeddings) # [batch_size, data_points_size, embedding_size]
@@ -128,7 +110,8 @@ class ViewInvariantEmbeddingModule(LightningModule):
         similarity_mat = torch.stack([sim[i:i+data_points_size, i:i+data_points_size] for i in range(0, sim.shape[0], data_points_size)]).squeeze()
 
         # calculate loss
-        loss, _, _ = loss_contrastive(text_embeddings, predicted_image_embeddings)
+        loss = self.loss(text_embeddings, predicted_image_embeddings)
+        loss = loss['loss']
 
         # calculate text to images similarity
         temp = pairwise_cosine_similarity(text_embeddings, predicted_image_embeddings.view(-1, embedding_size))
@@ -138,22 +121,22 @@ class ViewInvariantEmbeddingModule(LightningModule):
         std_t2i = t2i_similarity.std()
         std_t2i_per_object = t2i_similarity.std(dim=0)
 
-        save_matrix_png(similarity_mat.mean(dim=0), Path(self.cfg.paths.output_dir) / "sim_mean.png", type='mean')
-        save_matrix_png(similarity_mat.std(dim=0), Path(self.cfg.paths.output_dir) / "sim_std.png", type='std')
+        save_matrix_png(similarity_mat.mean(dim=0).cpu(), Path(self.cfg.paths.output_dir) / "sim_mean.png", type='mean')
+        save_matrix_png(similarity_mat.std(dim=0).cpu(), Path(self.cfg.paths.output_dir) / "sim_std.png", type='std')
 
         # capture all metrics in a dictionary
         metrics = {
-            "loss": loss.item(),
-            "mean_t2i": mean_t2i.item(),
-            "mean_t2i_per_object": mean_t2i_per_object.tolist(),
-            "std_t2i": std_t2i.item(),
-            "std_t2i_per_object": std_t2i_per_object.tolist()
+            "loss": loss.cpu().item(),
+            "mean_t2i": mean_t2i.cpu().item(),
+            "mean_t2i_per_object": mean_t2i_per_object.cpu().tolist(),
+            "std_t2i": std_t2i.cpu().item(),
+            "std_t2i_per_object": std_t2i_per_object.cpu().tolist()
         }
         with open(Path(self.cfg.paths.output_dir) / 'metrics.csv', 'w') as f:
             for key in metrics.keys():
-                f.write("%s,%s\n"%(key,metrics[key])
+                f.write("%s,%s\n"%(key,metrics[key]))
 
-        self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        # self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
         # self.test_output_list.append({"loss": loss, "similarity_matrix": similarity_mat})
     
@@ -171,7 +154,6 @@ class ViewInvariantEmbeddingModule(LightningModule):
     #     save_matrix_png(sim.std(dim=0), Path(self.cfg.paths.output_dir) / "sim_std.png", type='std')
     #     with open(Path(self.cfg.paths.output_dir) / "loss.txt", "w") as f:
     #         f.write(str(float(loss.item())))
-
 
     def setup(self, stage: str) -> None:
         """Lightning hook that is called at the beginning of fit (train + validate), validate,

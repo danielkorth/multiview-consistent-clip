@@ -31,7 +31,7 @@ class LossContrastive(nn.Module):
 
         # compute sum of al diagonals in similarity matrix
         n,_ = sim.shape
-        zero_mat = torch.zeros((n, n)) # Zero matrix used for padding
+        zero_mat = torch.zeros((n, n)).to(predicted_img_embeddings.device) # Zero matrix used for padding
         mat_padded =  torch.cat((zero_mat, sim, zero_mat), 1) # pads the matrix on left and right
         mat_strided = mat_padded.as_strided((n, 2*n), (3*n + 1, 1)) # Change the strides
         sum_diags = torch.sum(mat_strided, 0) # Sums the resulting matrix's columns
@@ -39,12 +39,12 @@ class LossContrastive(nn.Module):
         #extract the sums corresponding to the diagonals with similarity scores and dissimilarity scores
         dim = batch_size + batch_size * datapoint_size #dim of sim matrix
         similarity_indexes = np.arange(batch_size, dim, batch_size) #index of diagonals with sim score
-        sim_mask = torch.zeros(dim)
+        sim_mask = torch.zeros(dim).to(predicted_img_embeddings.device)
         sim_mask[similarity_indexes] = 1
         dissim_mask = 1 - sim_mask	
 
-        shifted_sim_mask = torch.cat((torch.zeros(dim), sim_mask))
-        shifted_dissim_mask = torch.cat((torch.zeros(dim), dissim_mask))
+        shifted_sim_mask = torch.cat((torch.zeros(dim).to(predicted_img_embeddings.device), sim_mask))
+        shifted_dissim_mask = torch.cat((torch.zeros(dim).to(predicted_img_embeddings.device), dissim_mask))
 
         similarity_scores = sum_diags * shifted_sim_mask
         similarity_score_summed = torch.sum(similarity_scores)
@@ -84,7 +84,7 @@ class LossObjectSimilarity(nn.Module):
 
         # compute sum of al diagonals in similarity matrix
         n,_ = sim.shape
-        zero_mat = torch.zeros((n, n)) # Zero matrix used for padding
+        zero_mat = torch.zeros((n, n)).to(predicted_img_embeddings.device) # Zero matrix used for padding
         mat_padded =  torch.cat((zero_mat, sim, zero_mat), 1) # pads the matrix on left and right
         mat_strided = mat_padded.as_strided((n, 2*n), (3*n + 1, 1)) # Change the strides
         sum_diags = torch.sum(mat_strided, 0) # Sums the resulting matrix's columns
@@ -92,9 +92,9 @@ class LossObjectSimilarity(nn.Module):
         #extract the sums corresponding to the diagonals with similarity scores and dissimilarity scores
         dim = batch_size + batch_size * datapoint_size #dim of sim matrix
         similarity_indexes = np.arange(batch_size, dim, batch_size) #index of diagonals with sim score
-        sim_mask = torch.zeros(dim)
+        sim_mask = torch.zeros(dim).to(predicted_img_embeddings.device)
         sim_mask[similarity_indexes] = 1
-        shifted_sim_mask = torch.cat((torch.zeros(dim), sim_mask))
+        shifted_sim_mask = torch.cat((torch.zeros(dim).to(predicted_img_embeddings.device), sim_mask))
         similarity_scores = sum_diags * shifted_sim_mask
         similarity_score_summed = torch.sum(similarity_scores)
 
@@ -133,15 +133,15 @@ class LossAutoencoder(nn.Module):
         sim = pairwise_cosine_similarity(permuted_embeddings)
 
         n,_ = sim.shape
-        zero_mat = torch.zeros((n, n)) # Zero matrix used for padding
+        zero_mat = torch.zeros((n, n)).to(original_img_embeddings.device) # Zero matrix used for padding
         mat_padded =  torch.cat((zero_mat, sim, zero_mat), 1) # pads the matrix on left and right
         mat_strided = mat_padded.as_strided((n, 2*n), (3*n + 1, 1)) # Change the strides
         sum_diags = torch.sum(mat_strided, 0) # Sums the resulting matrix's columns
         dim = batch_size * datapoint_size #dim of sim matrix
         similarity_indexes = np.arange(batch_size, dim, batch_size) #index of diagonals with sim score
-        sim_mask = torch.zeros(dim)
+        sim_mask = torch.zeros(dim).to(original_img_embeddings.device)
         sim_mask[similarity_indexes] = 1
-        shifted_sim_mask = torch.cat((torch.zeros(dim), sim_mask))
+        shifted_sim_mask = torch.cat((torch.zeros(dim).to(original_img_embeddings.device), sim_mask))
         similarity_scores = sum_diags * shifted_sim_mask
         similarity_score_summed = torch.sum(similarity_scores)
 

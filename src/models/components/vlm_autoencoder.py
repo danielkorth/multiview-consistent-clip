@@ -66,6 +66,9 @@ class VLMAutoencoder(nn.Module):
 
         view_comprehensive_decoding = vi_decoding + vd_decoding
 
+        # TODO IF TIME PERMITS ;)
+        # vd_decoding = F.normalize(vd_decoding, p=2, dim=1)
+
         return (
             view_comprehensive_decoding.view((batch_size, datapoint_size, vlm_embedding_size)), 
             vi_encoding.view(*(batch_size, datapoint_size, -1))
@@ -75,3 +78,16 @@ class VLMAutoencoder(nn.Module):
         for net in [self.view_invariant_encoder, self.view_dependent_encoder, self.view_invariant_decoder, self.view_dependent_decoder]:
             for name, param in net.named_parameters(recurse=recurse):
                 yield param
+    
+    def forward_view_independent(self, img_embeddings: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """ img_embeddings: torch.tensor (batch size, data points size, embedding size)"""
+        
+        batch_size, datapoint_size, vlm_embedding_size = img_embeddings.shape
+        img_embeddings = img_embeddings.view(-1, vlm_embedding_size)
+
+        vi_encoding = self.view_invariant_encoder(img_embeddings)
+        vi_decoding = self.view_invariant_decoder(vi_encoding)
+
+        view_comprehensive_decoding = vi_decoding 
+
+        return (view_comprehensive_decoding.view((batch_size, datapoint_size, vlm_embedding_size)), vi_encoding.view(*(batch_size, datapoint_size, -1)))
