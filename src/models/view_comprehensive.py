@@ -11,8 +11,8 @@ class ViewComprehensiveEmbeddingModule(LightningModule):
 
     def __init__(
         self,
-        net: VLMAutoencoder,
-        loss: LossAutoencoder,
+        net: torch.nn.Module,
+        loss: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler = None,
         compile: bool = False,
@@ -23,11 +23,6 @@ class ViewComprehensiveEmbeddingModule(LightningModule):
 
         self.net = net
         self.loss = loss
-
-        self.train_loss = MeanMetric()
-        self.val_loss = MeanMetric()
-        self.test_loss = MeanMetric()
-
 
     def model_step(
         self, batch: Dict[str, torch.tensor]

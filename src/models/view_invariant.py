@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics.functional.pairwise import pairwise_cosine_similarity
+from src.models.components.losses import LossAutoencoder
 
 import matplotlib.pyplot as plt
 
@@ -34,11 +35,6 @@ class ViewInvariantEmbeddingModule(LightningModule):
 
         self.net = net 
         self.loss = loss
-
-        # for averaging loss across batches
-        self.train_loss = MeanMetric()
-        self.val_loss = MeanMetric()
-        self.test_loss = MeanMetric()
 
     def forward(self, img_embeddings: torch.Tensor) -> torch.Tensor:
         """ img_embeddings: torch.tensor (batch size, data point size, embedding size)"""
