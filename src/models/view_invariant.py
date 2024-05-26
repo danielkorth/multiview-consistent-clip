@@ -7,9 +7,6 @@ from lightning import LightningModule
 from torchmetrics import MaxMetric, MeanMetric
 from torchmetrics.functional.pairwise import pairwise_cosine_similarity
 
-from src.models.components.loss_functions import loss_contrastive
-
-
 import matplotlib.pyplot as plt
 
 def save_cov_images(sim):
@@ -24,6 +21,7 @@ class ViewInvariantEmbeddingModule(LightningModule):
     def __init__(
         self,
         net: torch.nn.Module,
+        loss: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler = None,
         compile: bool = False,
@@ -35,6 +33,7 @@ class ViewInvariantEmbeddingModule(LightningModule):
         self.save_hyperparameters(logger=False, ignore=['net'])
 
         self.net = net 
+        self.loss = loss
 
         # for averaging loss across batches
         self.train_loss = MeanMetric()
@@ -52,7 +51,7 @@ class ViewInvariantEmbeddingModule(LightningModule):
 
     def model_step(
         self, batch: Dict[str, torch.tensor]
-    ) -> torch.Tensor:
+    ) -> dict:
         
         """
         batch: dict{ 
@@ -64,41 +63,42 @@ class ViewInvariantEmbeddingModule(LightningModule):
         text_embeddings = batch["prompt_embedding"]
         original_img_embeddings = batch["image_embeddings"]
         predicted_image_embeddings = self.forward(original_img_embeddings)
-
-        # return ((predicted_image_embeddings - original_img_embeddings).mean(), 0, 0)
-
-        return loss_contrastive(text_embeddings, predicted_image_embeddings)
+        
+        return self.loss(text_embeddings, predicted_image_embeddings)
 
     def training_step(
         self, batch: Dict[str, torch.tensor], batch_idx: int
     ) -> torch.Tensor:
-        loss, sim_score, dissim_score = self.model_step(batch)
+        loss_dict = self.model_step(batch)
+        loss = loss_dict['loss']
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
-        self.log("train/sim_score", sim_score, on_step=True, on_epoch=True, prog_bar=False)
-        self.log("train/dissim_score", dissim_score, on_step=True, on_epoch=True, prog_bar=False)
+
+        sim_score = loss_dict.get('sim_score')
+        if sim_score is not None:
+            self.log("train/sim_score", sim_score, on_step=True, on_epoch=True, prog_bar=False)
+        dissim_score = loss_dict.get('dissim_score')
+        if dissim_score is not None:
+            self.log("train/dissim_score", dissim_score, on_step=True, on_epoch=True, prog_bar=False)
+
         return loss
 
     def validation_step(self, batch: Dict[str, torch.tensor], batch_idx: int) -> None:
 
-        loss, sim_score, dissim_score = self.model_step(batch)
+        loss_dict = self.model_step(batch)
+        loss = loss_dict['loss']
         self.log("val/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
-        self.log("val/sim_score", sim_score, on_step=True, on_epoch=True, prog_bar=False)
-        self.log("val/dissim_score", dissim_score, on_step=True, on_epoch=True, prog_bar=False)
 
-        # TODO fix and uncomment
-
-        # sim = pairwise_cosine_similarity(predicted_img_embeddings[0], predicted_img_embeddings[0])
-        # self.logger.log_image(key='heatmap', images=[sim])
-
-        # should go down (learn mv consistency)
-        # self.log("val/mean_cossim", sim.mean(), on_step=True, on_epoch=True, prog_bar=False)
-        # self.log("val/std_cossim", sim.std(), on_step=True, on_epoch=True, prog_bar=True)
-        
-        # should not go down (dont unlearn)
+        sim_score = loss_dict.get('sim_score')
+        if sim_score is not None:
+            self.log("val/sim_score", sim_score, on_step=True, on_epoch=True, prog_bar=False)
+        dissim_score = loss_dict.get('dissim_score')
+        if dissim_score is not None:
+            self.log("val/dissim_score", dissim_score, on_step=True, on_epoch=True, prog_bar=False)
 
     def test_step(self, batch: Dict[str, torch.tensor], batch_idx: int) -> None:
-        loss, _, _ = self.model_step(batch)
-        self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        loss_dict = self.model_step(batch)
+        loss = loss_dict['loss']
+        self.log("test/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
 
     def setup(self, stage: str) -> None:
         """Lightning hook that is called at the beginning of fit (train + validate), validate,
