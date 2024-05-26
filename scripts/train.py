@@ -29,7 +29,7 @@ def train(cfg: DictConfig) -> None:
     datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
 
     log.info(f"Instantiating model <{cfg.model._target_}>")
-    model: LightningModule = hydra.utils.instantiate(cfg.model)
+    model: LightningModule = hydra.utils.instantiate(cfg.model, cfg=cfg)
 
     log.info("Instantiating callbacks...")
     callbacks: List[Callback] = instantiate_callbacks(cfg.get("callbacks"))
@@ -57,8 +57,6 @@ def train(cfg: DictConfig) -> None:
         log.info("Starting training!")
         trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
 
-    train_metrics = trainer.callback_metrics
-
     if cfg.get("test"):
         log.info("Starting testing!")
         ckpt_path = trainer.checkpoint_callback.best_model_path
@@ -67,9 +65,6 @@ def train(cfg: DictConfig) -> None:
             ckpt_path = None
         trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
         log.info(f"Best ckpt path: {ckpt_path}")
-
-    test_metrics = trainer.callback_metrics
-
 
 if __name__ == "__main__":
     train()

@@ -18,7 +18,7 @@ seed: 42
 
 trainer:
   min_epochs: 10
-  max_epochs: 100
+  max_epochs: 2000
   # num_sanity_val_steps: 0
   devices: 1
   check_val_every_n_epoch: 10
@@ -35,10 +35,11 @@ model:
 data:
   batch_size: 512 
   num_workers: 0
-  pin_memory: False
+  datapoint_size: 6
+  pin_memory: True
   train_split: train.csv
   val_split: val.csv
-  shuffle: False
+  shuffle: True
 
 callbacks:
   earlystopping: null

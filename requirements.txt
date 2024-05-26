@@ -37,4 +37,3 @@ wandb
 tqdm
 objaverse
 tyro==0.3.38
-

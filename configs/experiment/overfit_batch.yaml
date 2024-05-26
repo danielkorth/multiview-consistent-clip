@@ -21,6 +21,8 @@ trainer:
   max_epochs: 100
   num_sanity_val_steps: 0
 
+test: True
+
 model:
   scheduler: null
   net:
