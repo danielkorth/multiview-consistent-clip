@@ -88,6 +88,6 @@ class VLMAutoencoder(nn.Module):
         vi_encoding = self.view_invariant_encoder(img_embeddings)
         vi_decoding = self.view_invariant_decoder(vi_encoding)
 
-        view_comprehensive_decoding = vi_decoding 
+        view_comprehensive_decoding = vi_decoding
 
-        return (view_comprehensive_decoding.view((batch_size, datapoint_size, vlm_embedding_size)), vi_encoding.view(*(batch_size, datapoint_size, -1)))
+        return view_comprehensive_decoding.view((batch_size, datapoint_size, vlm_embedding_size))
