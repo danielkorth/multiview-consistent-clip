@@ -67,7 +67,7 @@ class LVMEmbeddingsDataset(Dataset):
             original_img_embeddings: torch.tensor (data points size, embedding size)}
             distances between text and image embedding: torch.tensor (data points size)
         """
-        if self.mode is 'test':
+        if self.mode == 'test':
             # load all views of the object
             image_indices = list(range(self.max_datapoint_size))
         else:

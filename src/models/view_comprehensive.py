@@ -2,10 +2,7 @@ from typing import Any, Dict, List, Tuple
 
 import torch
 from lightning import LightningModule
-from torchmetrics import MeanMetric
-
-from src.models.components.vlm_autoencoder import VLMAutoencoder
-from src.models.components.losses import LossAutoencoder
+from src.utils.visualize import save_matrix_png
 
 class ViewComprehensiveEmbeddingModule(LightningModule):
 
@@ -16,10 +13,11 @@ class ViewComprehensiveEmbeddingModule(LightningModule):
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler = None,
         compile: bool = False,
+        cfg: Dict[str, Any] = None,
     ) -> None:
 
         super().__init__()
-        self.save_hyperparameters(logger=False)
+        self.save_hyperparameters(logger=False, ignore=["net", "cfg"])
 
         self.net = net
         self.loss = loss

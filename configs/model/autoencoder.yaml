@@ -25,5 +25,9 @@ net:
   decoder_n_hidden_layers:  3
   decoder_output_size:  512
 
+loss:
+  _target_: src.models.components.losses.LossAutoencoder
+  weight_similarity: 0.5
+
 # compile model for faster training with pytorch 2.0
 compile: false

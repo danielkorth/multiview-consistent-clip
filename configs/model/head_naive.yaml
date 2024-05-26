@@ -16,9 +16,13 @@ scheduler:
 net:
   _target_: src.models.components.vlm_head.VLMHead
   input_size: 512 # based on CLIP 
-  hidden_size: 2048
+  hidden_size: 512
   n_hidden_layers: 3 # number of hidden layers
   output_size: 512
+
+loss:
+  _target_: src.models.components.losses.LossContrastive
+  weight_similarity: 0.5
 
 # compile model for faster training with pytorch 2.0
 compile: false

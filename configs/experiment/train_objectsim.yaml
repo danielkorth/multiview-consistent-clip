@@ -18,25 +18,19 @@ seed: 42
 
 trainer:
   min_epochs: 10
-  max_epochs: 2000
+  max_epochs: 800
   # num_sanity_val_steps: 0
   devices: 1
   check_val_every_n_epoch: 10
+  accelerator: gpu
 
 model:
   scheduler: null
-  net:
-    _target_: src.models.components.vlm_head.VLMHead
-    input_size: 512 # based on CLIP 
-    hidden_size: 512
-    n_hidden_layers: 2 # number of hidden layers
-    output_size: 512
   loss:
     _target_: src.models.components.losses.LossObjectSimilarity
-    weight_similarity: 0.7
 
 data:
-  batch_size: 512 
+  batch_size: 2048
   num_workers: 0
   datapoint_size: 6
   pin_memory: True
@@ -48,10 +42,11 @@ callbacks:
   earlystopping: null
   model_checkpoint: 
     every_n_epochs: 50
+    monitor: val/loss_epoch
 
 logger:
   wandb:
     tags: ${tags}
     group: "mvc-clip"
   aim:
-    experiment: "overfit_batch"
+    experiment: "train"
