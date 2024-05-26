@@ -18,7 +18,7 @@ seed: 42
 
 trainer:
   min_epochs: 10
-  max_epochs: 20
+  max_epochs: 100
 
 model:
   scheduler: null
@@ -29,7 +29,7 @@ model:
     n_hidden_layers: 2 # number of hidden layers
     output_size: 512
   loss:
-    _target_: src.models.components.losses.LossContrastive
+    _target_: src.models.components.losses.LossObjectSimilarity
     weight_similarity: 0.7
 
 data:
