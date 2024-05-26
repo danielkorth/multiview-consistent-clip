@@ -112,7 +112,7 @@ class ViewInvariantEmbeddingModule(LightningModule):
         text_embeddings = batch["prompt_embedding"]
         original_img_embeddings = batch["image_embeddings"]
         predicted_image_embeddings = self.forward(original_img_embeddings) # [batch_size, data_points_size, embedding_size]
-        predicted_image_embeddings = original_img_embeddings
+        # predicted_image_embeddings = original_img_embeddings
         batch_size, data_points_size, embedding_size = predicted_image_embeddings.shape
 
         # calculate pairwise cosine similarity between predicted image embeddings
