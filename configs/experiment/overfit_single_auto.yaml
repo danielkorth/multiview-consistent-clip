@@ -17,18 +17,32 @@ tags: ["overfit"]
 seed: 42 
 
 trainer:
-  min_epochs: 10
-  max_epochs: 300
+  min_epochs: 300
+  max_epochs: 700
 
 model:
   scheduler: null
+  net:
+    _target_: src.models.components.vlm_autoencoder.VLMAutoencoder
+
+    encoder_input_size:  512
+    encoder_hidden_size: 128
+    encoder_n_hidden_layers:  2
+    encoder_output_size:  128
+    decoder_input_size:  128
+    decoder_hidden_size:  128
+    decoder_n_hidden_layers:  2
+    decoder_output_size:  512
+  loss:
+    _target_: src.models.components.losses.LossAutoencoder
+    weight_similarity: 0.5
 
 data:
   batch_size: 1
+  datapoint_size: 1
   num_workers: 2
   train_split: train_overfit.csv
   val_split: val_overfit.csv
-  # TODO: should shuffle be here??
   shuffle: False
 
 callbacks:

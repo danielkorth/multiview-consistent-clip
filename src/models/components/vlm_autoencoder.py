@@ -70,7 +70,6 @@ class VLMAutoencoder(nn.Module):
             view_comprehensive_decoding.view((batch_size, datapoint_size, vlm_embedding_size)), 
             vi_encoding.view(*(batch_size, datapoint_size, -1))
         )
-    
     #TODO check if this works. used in config optimizer.
     def paramters(self, recurse: bool = True):
         for net in [self.view_invariant_encoder, self.view_dependent_encoder, self.view_invariant_decoder, self.view_dependent_decoder]:

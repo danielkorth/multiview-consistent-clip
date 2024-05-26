@@ -105,32 +105,48 @@ class LossObjectSimilarity(nn.Module):
 
 
 class LossAutoencoder(nn.Module):
-    def __init__(self):
+    def __init__(self, weight_similarity: float = 0.5):
         super().__init__()
+
+        self.weight_similarity = weight_similarity
 
     def forward(self,
         original_img_embeddings: torch.tensor,
         decoded_img_embeddings: torch.tensor,
         encoded_vi_img_embeddings: torch.tensor
-    ) -> torch.tensor:
+    ) -> dict:
 
         """Compute loss for autoencoder embeddings.
         
         original_img_embeddings: torch.tensor (batch size, data points size, vlm embedding size)}
         decoded_img_embeddings: torch.tensor (batch size, data points size, vlm embedding size)}
         encoded_vi_img_embeddings: torch.tensor (batch size, data points size, vi embedding size)}"""
-
-        batch_size, datapoint_size, vlm_embedding_size = original_img_embeddings.shape  
         
-        loss_auto = torch.norm(original_img_embeddings - decoded_img_embeddings, dim=-1).sum()
+        batch_size, datapoint_size, encoding_size = encoded_vi_img_embeddings.shape
+
+        #Compute autoencoder score
+        score_auto = torch.norm(original_img_embeddings - decoded_img_embeddings, dim=2).sum()
         
-        loss_vi = 0
-        for batch_idx in range(batch_size):
-            sim = pairwise_cosine_similarity(encoded_vi_img_embeddings[batch_idx])
-            loss_vi += torch.triu(sim, diagonal=1).sum()
+        # Compute view indepedent score
+        permuted_embeddings = encoded_vi_img_embeddings.permute(1, 0, 2) #shape (data points size + 1, batch size, embedding size)
+        permuted_embeddings = permuted_embeddings.reshape(-1, encoding_size) #shape ((data points size + 1) * batch size, embedding size)
+        sim = pairwise_cosine_similarity(permuted_embeddings)
 
-        loss_auto_normalized = loss_auto / (batch_size * datapoint_size)
-        loss_vi_normalized = loss_vi / (batch_size * datapoint_size * (datapoint_size + 1) / 2)
-        loss = loss_auto_normalized - loss_vi_normalized
+        n,_ = sim.shape
+        zero_mat = torch.zeros((n, n)) # Zero matrix used for padding
+        mat_padded =  torch.cat((zero_mat, sim, zero_mat), 1) # pads the matrix on left and right
+        mat_strided = mat_padded.as_strided((n, 2*n), (3*n + 1, 1)) # Change the strides
+        sum_diags = torch.sum(mat_strided, 0) # Sums the resulting matrix's columns
+        dim = batch_size * datapoint_size #dim of sim matrix
+        similarity_indexes = np.arange(batch_size, dim, batch_size) #index of diagonals with sim score
+        sim_mask = torch.zeros(dim)
+        sim_mask[similarity_indexes] = 1
+        shifted_sim_mask = torch.cat((torch.zeros(dim), sim_mask))
+        similarity_scores = sum_diags * shifted_sim_mask
+        similarity_score_summed = torch.sum(similarity_scores)
 
-        return loss, loss_auto_normalized, loss_vi_normalized
+        auto_score_normalized = score_auto / (batch_size * datapoint_size)
+        vi_score_normalized = similarity_score_summed / (batch_size * datapoint_size * (datapoint_size - 1) / 2)
+        loss = (1-self.weight_similarity)*auto_score_normalized - self.weight_similarity*vi_score_normalized
+
+        return {'loss':loss, 'auto_score_normalized':auto_score_normalized, 'vi_score_normalized':vi_score_normalized}
