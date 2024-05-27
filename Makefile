@@ -35,3 +35,18 @@ prepare_data:
 	python scripts/render_data.py
 	python scripts/get_vlm_embeddings.py +vlm='clip'
 	python scripts/generate_splits.py
+
+overfit_all:
+	python scripts/train.py experiment=overfit/object logger=wandb
+	python scripts/train.py experiment=overfit/contrastive logger=wandb
+	python scripts/train.py experiment=overfit/autoencoder logger=wandb
+
+batch_all:
+	python scripts/train.py experiment=batch/object logger=wandb
+	python scripts/train.py experiment=batch/contrastive logger=wandb
+	python scripts/train.py experiment=batch/autoencoder logger=wandb
+
+train_all:
+	python scripts/train.py experiment=train/object logger=wandb
+	python scripts/train.py experiment=train/contrastive logger=wandb
+	python scripts/train.py experiment=train/autoencoder logger=wandb

@@ -12,40 +12,32 @@ defaults:
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["overfit_batch"]
+tags: ["test", "contrastive"]
 
 seed: 42 
+test: True
 
 trainer:
   min_epochs: 10
   max_epochs: 100
-  num_sanity_val_steps: 0
 
-test: True
 
 model:
   scheduler: null
-  net:
-    _target_: src.models.components.vlm_head.VLMHead
-    input_size: 512 # based on CLIP 
-    hidden_size: 512
-    n_hidden_layers: 2 # number of hidden layers
-    output_size: 512
   loss:
     _target_: src.models.components.losses.LossObjectSimilarity
     weight_similarity: 0.7
 
 data:
   batch_size: 8
+  datapoint_size: 6
   num_workers: 0
   train_split: train_batch.csv
   val_split: val_batch.csv
   shuffle: False
-  datapoint_size: 6
 
 callbacks:
-  model_checkpoint: # null
-    every_n_epochs: 10
+  model_checkpoint: null
   early_stopping: null
 
 logger:
@@ -53,4 +45,4 @@ logger:
     tags: ${tags}
     group: "mvc-clip"
   aim:
-    experiment: "overfit_batch"
+    experiment: "train on batch with contrastive objective"

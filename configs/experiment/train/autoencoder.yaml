@@ -12,15 +12,13 @@ defaults:
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["train_all"]
+tags: ["train", "autoencoder"]
 
 seed: 42 
+test: True
 
 trainer:
-  min_epochs: 10
-  max_epochs: 800
-  # num_sanity_val_steps: 0
-  devices: 1
+  max_epochs: 1000
   check_val_every_n_epoch: 10
   accelerator: gpu
 
@@ -49,4 +47,4 @@ logger:
     tags: ${tags}
     group: "mvc-clip"
   aim:
-    experiment: "train"
+    experiment: "train with autoencoder objective"

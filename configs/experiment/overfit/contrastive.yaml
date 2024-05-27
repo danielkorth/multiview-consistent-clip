@@ -12,27 +12,20 @@ defaults:
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["overfit"]
+tags: ["overfit", "contrastive"]
 
 seed: 42 
+test: True
 
 trainer:
-  min_epochs: 10
-  max_epochs: 10
+  max_epochs: 100
 
 model:
   scheduler: null
-  net:
-    _target_: src.models.components.vlm_head.VLMHead
-    input_size: 512 # based on CLIP 
-    hidden_size: 512
-    n_hidden_layers: 2 # number of hidden layers
-    output_size: 512
   loss:
-    _target_: src.models.components.losses.LossObjectSimilarity
-    weight_similarity: 0.7
+    _target_: src.models.components.losses.LossContrastive
+    weight_similarity: 0.5
 
-test: True
 
 data:
   batch_size: 1
@@ -40,9 +33,7 @@ data:
   num_workers: 0
   train_split: train_overfit.csv
   val_split: val_overfit.csv
-  # TODO: should shuffle be here??
   shuffle: False
-  load_into_memory: False
 
 callbacks:
   earlystopping: null
@@ -50,9 +41,9 @@ callbacks:
 
 logger: null
 
-# logger:
-#   wandb:
-#     tags: ${tags}
-#     group: "mvc-clip"
-#   aim:
-#     experiment: "overfit_single"
+logger:
+  wandb:
+    tags: ${tags}
+    group: "mvc-clip"
+  aim:
+    experiment: "overfit with contrastive"
