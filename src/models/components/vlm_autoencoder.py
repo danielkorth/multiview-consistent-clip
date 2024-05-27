@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from typing import Tuple
+import numpy as np
 
 from src.models.components.vlm_head import VLMHead
 
@@ -9,47 +10,42 @@ class VLMAutoencoder(nn.Module):
     def __init__(
         self,
         encoder_input_size: int = 512,
-        encoder_hidden_size: int = 128,
         encoder_n_hidden_layers: int = 2,
-        encoder_output_size: int = 128,
-        decoder_input_size: int = 128,
-        decoder_hidden_size: int = 128,
-        decoder_n_hidden_layers: int = 2,
-        decoder_output_size: int = 512,
+        encoding_size: int = 128,
         act_fct: nn.Module = nn.ReLU(),
     ) -> None:
         
         super().__init__()
-        self.view_invariant_encoder = VLMHead(
+        self.view_invariant_encoder = VLMCoder(
             input_size=encoder_input_size,
-            hidden_size=encoder_hidden_size,
             n_hidden_layers=encoder_n_hidden_layers,
-            output_size=encoder_output_size,
-            act_fct=act_fct
+            output_size=encoding_size,
+            act_fct=act_fct, 
+            is_encoder=True
         )
         
-        self.view_dependent_encoder = VLMHead(
+        self.view_dependent_encoder = VLMCoder(
             input_size=encoder_input_size,
-            hidden_size=encoder_hidden_size,
             n_hidden_layers=encoder_n_hidden_layers,
-            output_size=encoder_output_size,
-            act_fct=act_fct
+            output_size=encoding_size,
+            act_fct=act_fct, 
+            is_encoder=True
         )
         
-        self.view_invariant_decoder = VLMHead(
-            input_size=decoder_input_size,
-            hidden_size=decoder_hidden_size,
-            n_hidden_layers=decoder_n_hidden_layers,
-            output_size=decoder_output_size,
-            act_fct=act_fct
+        self.view_invariant_decoder = VLMCoder(
+            input_size=encoding_size,
+            n_hidden_layers=encoder_n_hidden_layers,
+            output_size=encoder_input_size,
+            act_fct=act_fct, 
+            is_encoder=False
         )
         
-        self.view_dependent_decoder = VLMHead(
-            input_size=decoder_input_size,
-            hidden_size=decoder_hidden_size,
-            n_hidden_layers=decoder_n_hidden_layers,
-            output_size=decoder_output_size,
-            act_fct=act_fct
+        self.view_dependent_decoder = VLMCoder(
+            input_size=encoding_size,
+            n_hidden_layers=encoder_n_hidden_layers,
+            output_size=encoder_input_size,
+            act_fct=act_fct, 
+            is_encoder=False
         )
 
     def forward(self, img_embeddings: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -95,3 +91,35 @@ class VLMAutoencoder(nn.Module):
         for net in [self.view_invariant_encoder, self.view_dependent_encoder, self.view_invariant_decoder, self.view_dependent_decoder]:
             for name, param in net.named_parameters(recurse=recurse):
                 yield param
+
+
+
+class VLMCoder(nn.Module):
+    def __init__(
+        self,
+        input_size: int = 512,
+        n_hidden_layers: int = 2,
+        output_size: int = 128,
+        dropout: float = 0.0,
+        act_fct: nn.Module = nn.ReLU(),
+        is_encoder: bool = True
+    ) -> None:
+        
+        super().__init__()
+
+
+        linear_sizes = [
+            int(input_size - i * (input_size - output_size) / (n_hidden_layers + 1))
+            for i in range(n_hidden_layers + 2)
+        ]
+        layer_sizes = [1 << (size - 1).bit_length() for size in linear_sizes]
+
+        self.model = nn.Sequential()
+        for i in range(n_hidden_layers+1):
+            self.model.add_module('linear' + str(i), nn.Linear(layer_sizes[i], layer_sizes[i+1]))
+            self.model.add_module('activation' + str(i), act_fct)
+            if dropout > 0.0:
+                self.model.add_module('dropout' + str(i), nn.Dropout(dropout))
+            
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.model(x)
