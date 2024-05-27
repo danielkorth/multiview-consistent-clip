@@ -38,9 +38,9 @@ class ViewComprehensiveEmbeddingModule(LightningModule):
         """
     
         original_img_embeddings = batch["image_embeddings"]
-        view_comprehensive_decodings, view_independent_encodings = self.net.forward(original_img_embeddings)
+        out = self.net.forward(original_img_embeddings)
 
-        return self.loss(original_img_embeddings, view_comprehensive_decodings, view_independent_encodings)
+        return self.loss(original_img_embeddings, out['decoded'], out['vi_encoding'], out['vd_decoding'])
 
     def training_step(
         self, batch: Dict[str, torch.tensor], batch_idx: int
@@ -68,7 +68,7 @@ class ViewComprehensiveEmbeddingModule(LightningModule):
 
         text_embeddings = batch["prompt_embedding"]
         original_img_embeddings = batch["image_embeddings"]
-        predicted_image_embeddings = self.net.forward_view_independent(original_img_embeddings) # [batch_size, data_points_size, embedding_size]
+        predicted_image_embeddings = self.net.forward_view_independent(original_img_embeddings)['decoded'] # [batch_size, data_points_size, embedding_size]
         # predicted_image_embeddings = original_img_embeddings
         batch_size, data_points_size, embedding_size = predicted_image_embeddings.shape
 

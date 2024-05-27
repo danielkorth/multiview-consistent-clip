@@ -69,15 +69,11 @@ class VLMAutoencoder(nn.Module):
         # TODO IF TIME PERMITS ;)
         # vd_decoding = F.normalize(vd_decoding, p=2, dim=1)
 
-        return (
-            view_comprehensive_decoding.view((batch_size, datapoint_size, vlm_embedding_size)), 
-            vi_encoding.view(*(batch_size, datapoint_size, -1))
-        )
-    #TODO check if this works. used in config optimizer.
-    def paramters(self, recurse: bool = True):
-        for net in [self.view_invariant_encoder, self.view_dependent_encoder, self.view_invariant_decoder, self.view_dependent_decoder]:
-            for name, param in net.named_parameters(recurse=recurse):
-                yield param
+        return {
+            "decoded": view_comprehensive_decoding.view((batch_size, datapoint_size, vlm_embedding_size)),
+            "vi_encoding": vi_encoding.view(*(batch_size, datapoint_size, -1)),
+            "vd_decoding": vd_decoding.view(*(batch_size, datapoint_size, -1))
+        }
     
     def forward_view_independent(self, img_embeddings: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """ img_embeddings: torch.tensor (batch size, data points size, embedding size)"""
@@ -90,4 +86,12 @@ class VLMAutoencoder(nn.Module):
 
         view_comprehensive_decoding = vi_decoding
 
-        return view_comprehensive_decoding.view((batch_size, datapoint_size, vlm_embedding_size))
+        return {
+            "decoded": view_comprehensive_decoding.view((batch_size, datapoint_size, vlm_embedding_size)),
+            "vi_encoding": vi_encoding.view(*(batch_size, datapoint_size, -1)),
+        }
+
+    def paramters(self, recurse: bool = True):
+        for net in [self.view_invariant_encoder, self.view_dependent_encoder, self.view_invariant_decoder, self.view_dependent_decoder]:
+            for name, param in net.named_parameters(recurse=recurse):
+                yield param

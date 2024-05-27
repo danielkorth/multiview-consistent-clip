@@ -13,12 +13,12 @@ class LossContrastive(nn.Module):
 
     def forward(
         self,
-        text_embeddings: torch.tensor,
-        predicted_img_embeddings: torch.tensor
-    ) -> torch.tensor:
+        text_embeddings: torch.Tensor,
+        predicted_img_embeddings: torch.Tensor
+    ) -> torch.Tensor:
         """
-        text_embeddings: torch.tensor (batch size, embedding size), 
-        img_embeddings: torch.tensor (batch size, data points size, embedding size)
+        text_embeddings: torch.Tensor (batch size, embedding size), 
+        img_embeddings: torch.Tensor (batch size, data points size, embedding size)
         """
         # rearrange embeddings so that we get (t_a, t_b, ..., img_a1, img_b1, ..., img_an, img_bn)
         batch_size, datapoint_size, embedding_size = predicted_img_embeddings.shape
@@ -66,12 +66,12 @@ class LossObjectSimilarity(nn.Module):
 
     def forward(
         self,
-        text_embeddings: torch.tensor,
-        predicted_img_embeddings: torch.tensor
+        text_embeddings: torch.Tensor,
+        predicted_img_embeddings: torch.Tensor
     ) -> dict:
         """
-        text_embeddings: torch.tensor (batch size, embedding size), 
-        img_embeddings: torch.tensor (batch size, data points size, embedding size)
+        text_embeddings: torch.Tensor (batch size, embedding size), 
+        img_embeddings: torch.Tensor (batch size, data points size, embedding size)
         """
         # rearrange embeddings so that we get (t_a, t_b, ..., img_a1, img_b1, ..., img_an, img_bn)
         batch_size, datapoint_size, embedding_size = predicted_img_embeddings.shape
@@ -105,22 +105,24 @@ class LossObjectSimilarity(nn.Module):
 
 
 class LossAutoencoder(nn.Module):
-    def __init__(self, weight_similarity: float = 0.5):
+    def __init__(self, weight_similarity: float = 0.5, reg_vd: float = 0.0):
         super().__init__()
 
         self.weight_similarity = weight_similarity
+        self.reg_vd = reg_vd
 
     def forward(self,
-        original_img_embeddings: torch.tensor,
-        decoded_img_embeddings: torch.tensor,
-        encoded_vi_img_embeddings: torch.tensor
+        original_img_embeddings: torch.Tensor,
+        decoded_img_embeddings: torch.Tensor,
+        encoded_vi_img_embeddings: torch.Tensor,
+        decoded_vd_img_embeddings: torch.Tensor = None,
     ) -> dict:
 
         """Compute loss for autoencoder embeddings.
         
-        original_img_embeddings: torch.tensor (batch size, data points size, vlm embedding size)}
-        decoded_img_embeddings: torch.tensor (batch size, data points size, vlm embedding size)}
-        encoded_vi_img_embeddings: torch.tensor (batch size, data points size, vi embedding size)}"""
+        original_img_embeddings: torch.Tensor (batch size, data points size, vlm embedding size)}
+        decoded_img_embeddings: torch.Tensor (batch size, data points size, vlm embedding size)}
+        encoded_vi_img_embeddings: torch.Tensor (batch size, data points size, vi embedding size)}"""
         
         batch_size, datapoint_size, encoding_size = encoded_vi_img_embeddings.shape
 
@@ -147,6 +149,12 @@ class LossAutoencoder(nn.Module):
 
         auto_score_normalized = score_auto / (batch_size * datapoint_size)
         vi_score_normalized = similarity_score_summed / (batch_size * datapoint_size * (datapoint_size - 1) / 2)
+
         loss = (1-self.weight_similarity)*auto_score_normalized - self.weight_similarity*vi_score_normalized
 
-        return {'loss':loss, 'auto_score_normalized':auto_score_normalized, 'vi_score_normalized':vi_score_normalized}
+        if self.reg_vd > 0:
+            # regularize the view_dependent information (we want most of the information to be view-independent) 
+            permuted_embeddings = decoded_vd_img_embeddings.norm(dim=-1).mean()
+            loss += (permuted_embeddings * self.reg_vd)
+
+        return {'loss': loss, 'auto_score_normalized': auto_score_normalized, 'vi_score_normalized': vi_score_normalized}

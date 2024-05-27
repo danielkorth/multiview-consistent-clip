@@ -12,41 +12,36 @@ defaults:
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
 
-tags: ["train", "autoencoder"]
+tags: ["overfit", "autoencoder"]
 
 seed: 42 
 test: True
 
 trainer:
-  max_epochs: 1000
-  check_val_every_n_epoch: 10
-  accelerator: gpu
+  max_epochs: 100 
 
 model:
   scheduler: null
   loss:
     _target_: src.models.components.losses.LossAutoencoder
     weight_similarity: 0.5
-    reg_vd: 0.0
+    reg_vd: 0.2
 
 data:
-  batch_size: 2048
-  num_workers: 0
+  batch_size: 1
   datapoint_size: 6
-  pin_memory: True
-  train_split: train.csv
-  val_split: val.csv
-  shuffle: True
+  num_workers: 0
+  train_split: train_overfit.csv
+  val_split: val_overfit.csv
+  shuffle: False
 
 callbacks:
   earlystopping: null
-  model_checkpoint: 
-    every_n_epochs: 50
-    monitor: val/loss_epoch
+  model_checkpoint: null
 
 logger:
   wandb:
     tags: ${tags}
     group: "mvc-clip"
   aim:
-    experiment: "train with autoencoder objective"
+    experiment: "overfit with autoencoder"
