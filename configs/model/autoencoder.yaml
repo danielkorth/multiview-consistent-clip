@@ -20,6 +20,8 @@ net:
   encoder_n_hidden_layers: 2
   encoding_size: 128
 
+  dropout_rate: 0.2
+
 loss:
   _target_: src.models.components.losses.LossAutoencoder
   weight_similarity: 0.5

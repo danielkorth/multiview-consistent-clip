@@ -163,9 +163,4 @@ class LossAutoencoder(nn.Module):
 
         loss = self.weight_auto * score_auto + (1-self.weight_auto) * score_vi
 
-        # if self.reg_vd > 0:
-        #     # regularize the view_dependent information (we want most of the information to be view-independent) 
-        #     permuted_embeddings = decoded_vd_img_embeddings.norm(dim=-1).mean()
-        #     loss += (permuted_embeddings * self.reg_vd)
-
         return {'loss': loss, 'auto_score_normalized': score_auto, 'vi_score_normalized': score_vi}

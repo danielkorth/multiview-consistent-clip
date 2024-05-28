@@ -13,6 +13,7 @@ class VLMAutoencoder(nn.Module):
         encoder_n_hidden_layers: int = 2,
         encoding_size: int = 128,
         act_fct: nn.Module = nn.ReLU(),
+        dropout_rate: float = 0.2
     ) -> None:
         
         super().__init__()
@@ -48,6 +49,8 @@ class VLMAutoencoder(nn.Module):
             is_encoder=False
         )
 
+        self.dropout_rate = dropout_rate
+
     def forward(self, img_embeddings: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """ img_embeddings: torch.tensor (batch size, data points size, embedding size)"""
         
@@ -62,9 +65,10 @@ class VLMAutoencoder(nn.Module):
 
         view_comprehensive_decoding = vi_decoding + vd_decoding
 
-        # TODO IF TIME PERMITS ;)
-        # vd_decoding = F.normalize(vd_decoding, p=2, dim=1)
-
+        if self.train:
+            if np.random.rand() < self.dropout_rate:
+                view_comprehensive_decoding = vi_decoding
+                
         return {
             "decoded": view_comprehensive_decoding.view((batch_size, datapoint_size, vlm_embedding_size)),
             "vi_encoding": vi_encoding.view(*(batch_size, datapoint_size, -1)),
