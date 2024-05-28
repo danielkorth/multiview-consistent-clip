@@ -105,10 +105,11 @@ class LossObjectSimilarity(nn.Module):
 
 
 class LossAutoencoder(nn.Module):
-    def __init__(self, weight_similarity: float = 0.5, reg_vd: float = 0.0):
+    def __init__(self, weight_similarity: float = 0.5, weigth_autoencoder: float = 0.2,  reg_vd: float = 0.0):
         super().__init__()
 
         self.weight_similarity = weight_similarity
+        self.weight_auto = weigth_autoencoder
         self.reg_vd = reg_vd
 
     def forward(self,
@@ -127,11 +128,12 @@ class LossAutoencoder(nn.Module):
         batch_size, datapoint_size, encoding_size = encoded_vi_img_embeddings.shape
 
         #Compute autoencoder score
-        score_auto = torch.norm(original_img_embeddings - decoded_img_embeddings, dim=2).sum()
+        score_auto = torch.norm(original_img_embeddings - decoded_img_embeddings, dim=2).sum() / (batch_size * datapoint_size)
         
         # Compute view indepedent score
         permuted_embeddings = encoded_vi_img_embeddings.permute(1, 0, 2) #shape (data points size + 1, batch size, embedding size)
         permuted_embeddings = permuted_embeddings.reshape(-1, encoding_size) #shape ((data points size + 1) * batch size, embedding size)
+        permuted_embeddings += 1e-7 # add small value to avoid division by zero
         sim = pairwise_cosine_similarity(permuted_embeddings)
 
         n,_ = sim.shape
@@ -140,21 +142,30 @@ class LossAutoencoder(nn.Module):
         mat_strided = mat_padded.as_strided((n, 2*n), (3*n + 1, 1)) # Change the strides
         sum_diags = torch.sum(mat_strided, 0) # Sums the resulting matrix's columns
         dim = batch_size * datapoint_size #dim of sim matrix
-        similarity_indexes = np.arange(batch_size, dim, batch_size) #index of diagonals with sim score
+        similarity_indexes = np.arange(0, dim, batch_size) #index of diagonals with sim score
         sim_mask = torch.zeros(dim).to(original_img_embeddings.device)
         sim_mask[similarity_indexes] = 1
         shifted_sim_mask = torch.cat((torch.zeros(dim).to(original_img_embeddings.device), sim_mask))
         similarity_scores = sum_diags * shifted_sim_mask
-        similarity_score_summed = torch.sum(similarity_scores)
+        similarity_score_normalized = torch.sum(similarity_scores) / (batch_size * datapoint_size * (datapoint_size - 1) / 2)
 
-        auto_score_normalized = score_auto / (batch_size * datapoint_size)
-        vi_score_normalized = similarity_score_summed / (batch_size * datapoint_size * (datapoint_size - 1) / 2)
+        if self.weight_similarity < 1 and batch_size > 1:
+            dissim_mask = 1 - sim_mask
+            shifted_dissim_mask = torch.cat((torch.zeros(dim).to(original_img_embeddings.device), dissim_mask))
+            dissim_scores = sum_diags * shifted_dissim_mask
+            dissim_score_normalized = torch.sum(dissim_scores) / (datapoint_size * (datapoint_size - 1) * batch_size * (batch_size - 1) / 2)
+            score_vi =  - self.weight_similarity*similarity_score_normalized + (1-self.weight_similarity)*dissim_score_normalized
 
-        loss = (1-self.weight_similarity)*auto_score_normalized - self.weight_similarity*vi_score_normalized
+        else:
+            score_vi =  - similarity_score_normalized 
 
-        if self.reg_vd > 0:
-            # regularize the view_dependent information (we want most of the information to be view-independent) 
-            permuted_embeddings = decoded_vd_img_embeddings.norm(dim=-1).mean()
-            loss += (permuted_embeddings * self.reg_vd)
 
-        return {'loss': loss, 'auto_score_normalized': auto_score_normalized, 'vi_score_normalized': vi_score_normalized}
+
+        loss = self.weight_auto * score_auto + (1-self.weight_auto) * score_vi
+
+        # if self.reg_vd > 0:
+        #     # regularize the view_dependent information (we want most of the information to be view-independent) 
+        #     permuted_embeddings = decoded_vd_img_embeddings.norm(dim=-1).mean()
+        #     loss += (permuted_embeddings * self.reg_vd)
+
+        return {'loss': loss, 'auto_score_normalized': score_auto, 'vi_score_normalized': score_vi}
