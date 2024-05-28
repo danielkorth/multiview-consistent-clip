@@ -94,11 +94,7 @@ class ViewInvariantEmbeddingModule(LightningModule):
         # predicted_image_embeddings = original_img_embeddings
         batch_size, data_points_size, embedding_size = predicted_image_embeddings.shape
 
-        # calculate pairwise cosine similarity between predicted image embeddings
-        sim = pairwise_cosine_similarity(predicted_image_embeddings.view(-1, embedding_size), predicted_image_embeddings.view(-1, embedding_size))
-        similarity_mat = torch.stack([sim[i:i+data_points_size, i:i+data_points_size] for i in range(0, sim.shape[0], data_points_size)]).squeeze()
-
-        # calculate loss
+        # # calculate loss 
         loss = self.loss(text_embeddings, predicted_image_embeddings)
         loss = loss['loss']
 
@@ -106,29 +102,45 @@ class ViewInvariantEmbeddingModule(LightningModule):
         temp = pairwise_cosine_similarity(text_embeddings, predicted_image_embeddings.view(-1, embedding_size))
         t2i_similarity = torch.stack([temp[i, (i*data_points_size):(i*data_points_size)+data_points_size] for i in range(0, batch_size)])
         mean_t2i = t2i_similarity.mean()
-        mean_t2i_per_object = t2i_similarity.mean(dim=0)
         std_t2i = t2i_similarity.std()
-        std_t2i_per_object = t2i_similarity.std(dim=0)
 
+        # calculate similarity matrix for single object
+        sim = pairwise_cosine_similarity(predicted_image_embeddings.view(-1, embedding_size), predicted_image_embeddings.view(-1, embedding_size))
+        similarity_mat = torch.stack([sim[i:i+data_points_size, i:i+data_points_size] for i in range(0, sim.shape[0], data_points_size)]).squeeze()
         save_matrix_png(similarity_mat.mean(dim=0).cpu(), Path(self.cfg.paths.output_dir) / "sim_mean.png", type='mean')
         save_matrix_png(similarity_mat.std(dim=0).cpu(), Path(self.cfg.paths.output_dir) / "sim_std.png", type='std')
+
+        # calculate similarity matrix for all (+ text)
+        a = torch.cat((text_embeddings, predicted_image_embeddings.view(-1, embedding_size)))
+        b = pairwise_cosine_similarity(a)
+        save_matrix_png(b.cpu(), Path(self.cfg.paths.output_dir) / "similarity_matrix_huuge.png", type='mean')
+
+
+        # calculate inter and intra object similarity
+        intra_object_mask = torch.ones_like(sim).bool()
+        for i in range(0, sim.shape[0], data_points_size):
+            intra_object_mask[i:i+data_points_size, i:i+data_points_size] = 0
+        intra_object_similarity = sim[intra_object_mask].mean()
+        intra_object_similarity_std = sim[intra_object_mask].std()
+
+        inter_object_mask = (~intra_object_mask) & (~torch.eye(intra_object_mask.shape[0]).to(intra_object_mask.device).bool())
+        inter_object_similarity = sim[inter_object_mask].mean()
+        inter_object_similarity_std = sim[inter_object_mask].std()
+
 
         # capture all metrics in a dictionary
         metrics = {
             "loss": loss.cpu().item(),
             "mean_t2i": mean_t2i.cpu().item(),
-            "mean_t2i_per_object": mean_t2i_per_object.cpu().tolist(),
             "std_t2i": std_t2i.cpu().item(),
-            "std_t2i_per_object": std_t2i_per_object.cpu().tolist()
+            "intra_object_similarity": intra_object_similarity.cpu().item(),
+            "intra_object_similarity_std": intra_object_similarity_std.cpu().item(),
+            "inter_object_similarity": inter_object_similarity.cpu().item(),
+            "inter_object_similarity_std": inter_object_similarity_std.cpu().item(),
         }
         with open(Path(self.cfg.paths.output_dir) / 'metrics.csv', 'w') as f:
             for key in metrics.keys():
                 f.write("%s,%s\n"%(key,metrics[key]))
-
-        # TODO remove after debugging
-        a = torch.cat((text_embeddings, predicted_image_embeddings.view(-1, embedding_size)))
-        b = pairwise_cosine_similarity(a)
-        save_matrix_png(b.cpu(), Path(self.cfg.paths.output_dir) / "similarity_matrix_huuge.png", type='mean')
 
         # self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 
