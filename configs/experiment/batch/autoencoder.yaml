@@ -17,7 +17,7 @@ tags: ["batch", "autoencoder"]
 seed: 42 
 
 trainer:
-  max_epochs: 100
+  max_epochs: 1000
 
 model:
   scheduler: null

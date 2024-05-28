@@ -18,7 +18,7 @@ seed: 42
 test: True
 
 trainer:
-  max_epochs: 100 
+  max_epochs: 1000
 
 model:
   scheduler: null

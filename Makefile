@@ -55,3 +55,8 @@ train_object:
 	python scripts/train.py experiment=overfit/object logger=wandb
 	python scripts/train.py experiment=batch/object logger=wandb
 	python scripts/train.py experiment=train/object logger=wandb
+
+train_autoencoder:
+	python scripts/train.py experiment=overfit/autoencoder logger=wandb
+	python scripts/train.py experiment=batch/autoencoder logger=wandb
+	python scripts/train.py experiment=train/autoencoder logger=wandb
