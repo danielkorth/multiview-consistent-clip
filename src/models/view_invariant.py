@@ -4,7 +4,7 @@ from pathlib import Path
 import torch
 from lightning import LightningModule
 from torchmetrics.functional.pairwise import pairwise_cosine_similarity
-from src.utils.visualize import save_matrix_png
+from src.utils.visualize import plot_object_similarity, plot_all_similarity 
 
 
 class ViewInvariantEmbeddingModule(LightningModule):
@@ -82,11 +82,6 @@ class ViewInvariantEmbeddingModule(LightningModule):
         if dissim_score is not None:
             self.log("val/dissim_score", dissim_score, on_step=True, on_epoch=True, prog_bar=False)
     
-    # def on_test_epoch_start(self) -> None:
-    #     super().on_validation_epoch_start()
-    #     self.test_output_list = []
-    #     return 
-
     def test_step(self, batch: Dict[str, torch.tensor], batch_idx: int) -> None:
         text_embeddings = batch["prompt_embedding"]
         original_img_embeddings = batch["image_embeddings"]
@@ -94,7 +89,7 @@ class ViewInvariantEmbeddingModule(LightningModule):
         # predicted_image_embeddings = original_img_embeddings
         batch_size, data_points_size, embedding_size = predicted_image_embeddings.shape
 
-        # # calculate loss 
+        # calculate loss 
         loss = self.loss(text_embeddings, predicted_image_embeddings)
         loss = loss['loss']
 
@@ -107,14 +102,22 @@ class ViewInvariantEmbeddingModule(LightningModule):
         # calculate similarity matrix for single object
         sim = pairwise_cosine_similarity(predicted_image_embeddings.view(-1, embedding_size), predicted_image_embeddings.view(-1, embedding_size))
         similarity_mat = torch.stack([sim[i:i+data_points_size, i:i+data_points_size] for i in range(0, sim.shape[0], data_points_size)]).squeeze()
-        save_matrix_png(similarity_mat.mean(dim=0).cpu(), Path(self.cfg.paths.output_dir) / "sim_mean.png", type='mean')
-        save_matrix_png(similarity_mat.std(dim=0).cpu(), Path(self.cfg.paths.output_dir) / "sim_std.png", type='std')
+        plot_object_similarity(x=similarity_mat.mean(dim=0).cpu(),
+                            path=Path(self.cfg.paths.output_dir),
+                            title="Mean Cosine Similarity between single object embeddings",
+                            type='mean')
+        plot_object_similarity(x=similarity_mat.std(dim=0).cpu(),
+                            path=Path(self.cfg.paths.output_dir),
+                            title="Std Cosine Similarity between single object embeddings",
+                            type='mean')
 
         # calculate similarity matrix for all (+ text)
         a = torch.cat((text_embeddings, predicted_image_embeddings.view(-1, embedding_size)))
         b = pairwise_cosine_similarity(a)
-        save_matrix_png(b.cpu(), Path(self.cfg.paths.output_dir) / "similarity_matrix_huuge.png", type='mean')
-
+        plot_all_similarity(x=b.cpu(),
+                            path=Path(self.cfg.paths.output_dir),
+                            title="Cosine Similarity between all objects & text", 
+                            type='mean')
 
         # calculate inter and intra object similarity
         intra_object_mask = torch.ones_like(sim).bool()
@@ -126,7 +129,6 @@ class ViewInvariantEmbeddingModule(LightningModule):
         inter_object_mask = (~intra_object_mask) & (~torch.eye(intra_object_mask.shape[0]).to(intra_object_mask.device).bool())
         inter_object_similarity = sim[inter_object_mask].mean()
         inter_object_similarity_std = sim[inter_object_mask].std()
-
 
         # capture all metrics in a dictionary
         metrics = {
@@ -142,24 +144,6 @@ class ViewInvariantEmbeddingModule(LightningModule):
             for key in metrics.keys():
                 f.write("%s,%s\n"%(key,metrics[key]))
 
-        # self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-
-        # self.test_output_list.append({"loss": loss, "similarity_matrix": similarity_mat})
-    
-    # def on_test_epoch_end(self) -> None:
-    #     # compose the test_output_list
-    #     outputs = {}
-    #     for key in self.test_output_list[0].keys():
-    #         outputs[key] = [d[key] for d in self.test_output_list]
-
-    #     loss = torch.stack(outputs['loss'])
-    #     sim = torch.stack(outputs['similarity_matrix']).squeeze()
-
-    #     # save thes metrics
-    #     save_matrix_png(sim.mean(dim=0), Path(self.cfg.paths.output_dir) / "sim_mean.png", type='mean')
-    #     save_matrix_png(sim.std(dim=0), Path(self.cfg.paths.output_dir) / "sim_std.png", type='std')
-    #     with open(Path(self.cfg.paths.output_dir) / "loss.txt", "w") as f:
-    #         f.write(str(float(loss.item())))
 
     def setup(self, stage: str) -> None:
         """Lightning hook that is called at the beginning of fit (train + validate), validate,
