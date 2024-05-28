@@ -72,6 +72,8 @@ class LVMEmbeddingsDataset(Dataset):
             image_indices = list(range(self.max_datapoint_size))
         else:
             image_indices = random.sample(range(self.num_encodings_per_object), self.datapoint_size)
+            # TODO remove after debugging
+            # image_indices = [0]
         
         if self.load_into_memory:
             prompt_embedding = self.text_embeddings[idx]

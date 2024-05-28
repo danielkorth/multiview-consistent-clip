@@ -20,7 +20,7 @@ class ViewInvariantEmbeddingModule(LightningModule):
 
         super().__init__()
 
-        self.save_hyperparameters(logger=False, ignore=['net', 'cfg'])
+        self.save_hyperparameters(logger=False)
 
         self.net = net 
         self.cfg = cfg
@@ -81,17 +81,6 @@ class ViewInvariantEmbeddingModule(LightningModule):
         dissim_score = loss_dict.get('dissim_score')
         if dissim_score is not None:
             self.log("val/dissim_score", dissim_score, on_step=True, on_epoch=True, prog_bar=False)
-
-        # TODO fix and uncomment
-
-        # sim = pairwise_cosine_similarity(predicted_img_embeddings[0], predicted_img_embeddings[0])
-        # self.logger.log_image(key='heatmap', images=[sim])
-
-        # should go down (learn mv consistency)
-        # self.log("val/mean_cossim", sim.mean(), on_step=True, on_epoch=True, prog_bar=False)
-        # self.log("val/std_cossim", sim.std(), on_step=True, on_epoch=True, prog_bar=True)
-        
-        # should not go down (dont unlearn)
     
     # def on_test_epoch_start(self) -> None:
     #     super().on_validation_epoch_start()
@@ -135,6 +124,11 @@ class ViewInvariantEmbeddingModule(LightningModule):
         with open(Path(self.cfg.paths.output_dir) / 'metrics.csv', 'w') as f:
             for key in metrics.keys():
                 f.write("%s,%s\n"%(key,metrics[key]))
+
+        # TODO remove after debugging
+        a = torch.cat((text_embeddings, predicted_image_embeddings.view(-1, embedding_size)))
+        b = pairwise_cosine_similarity(a)
+        save_matrix_png(b.cpu(), Path(self.cfg.paths.output_dir) / "similarity_matrix_huuge.png", type='mean')
 
         # self.log("test/loss", loss, on_step=False, on_epoch=True, prog_bar=True)
 

@@ -40,7 +40,7 @@ callbacks:
   earlystopping: null
   model_checkpoint: 
     every_n_epochs: 50
-    monitor: val/loss_epoch
+    monitor: val/loss
 
 logger:
   wandb:

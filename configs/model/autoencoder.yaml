@@ -16,14 +16,9 @@ scheduler:
 net:
   _target_: src.models.components.vlm_autoencoder.VLMAutoencoder
 
-  encoder_input_size:  512
-  encoder_hidden_size:  128
-  encoder_n_hidden_layers:  3
-  encoder_output_size:  128
-  decoder_input_size:  128
-  decoder_hidden_size:  128
-  decoder_n_hidden_layers:  3
-  decoder_output_size:  512
+  encoder_input_size: 512
+  encoder_n_hidden_layers: 2
+  encoding_size: 128
 
 loss:
   _target_: src.models.components.losses.LossAutoencoder

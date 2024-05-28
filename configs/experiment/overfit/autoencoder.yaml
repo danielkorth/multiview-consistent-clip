@@ -22,6 +22,7 @@ trainer:
 
 model:
   scheduler: null
+
   loss:
     _target_: src.models.components.losses.LossAutoencoder
     weight_similarity: 0.5

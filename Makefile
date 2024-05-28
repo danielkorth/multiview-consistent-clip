@@ -50,3 +50,8 @@ train_all:
 	python scripts/train.py experiment=train/object logger=wandb
 	python scripts/train.py experiment=train/contrastive logger=wandb
 	python scripts/train.py experiment=train/autoencoder logger=wandb
+
+train_object:
+	python scripts/train.py experiment=overfit/object logger=wandb
+	python scripts/train.py experiment=batch/object logger=wandb
+	python scripts/train.py experiment=train/object logger=wandb

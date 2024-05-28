@@ -39,8 +39,6 @@ callbacks:
   earlystopping: null
   model_checkpoint: null
 
-logger: null
-
 logger:
   wandb:
     tags: ${tags}

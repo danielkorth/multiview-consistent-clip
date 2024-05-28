@@ -14,10 +14,52 @@ from tests.helpers.run_if import RunIf
 from torchmetrics.functional.pairwise import pairwise_cosine_similarity
 import torch.nn.functional as F
 
-from src.models.components.loss_functions import loss_contrastive
+from src.models.components.losses import LossContrastive
 
 
 import torch
+
+def nearest_power_of_2(x):
+    return 1 << (x - 1).bit_length()
+
+def test_layers_size():
+
+    # for encoder
+    input_size = 512
+    output_size = 128
+    n_hidden_layers = 2
+
+
+
+    linear_sizes = [
+        int(input_size - i * (input_size - output_size) / (n_hidden_layers + 1))
+        for i in range(n_hidden_layers + 2)
+    ]
+
+    print(linear_sizes)
+    
+    # Adjust sizes to the nearest power of 2
+    layer_sizes = [1 << (size - 1).bit_length() for size in linear_sizes]
+
+    print(layer_sizes)
+
+    ## for decoder
+
+    input_size = 128
+    output_size = 512
+    n_hidden_layers = 2
+
+    linear_sizes = [
+        int(input_size - i * (input_size - output_size) / (n_hidden_layers + 1))
+        for i in range(n_hidden_layers + 1, -1, -1)
+    ]
+
+    print(linear_sizes)
+    
+    # Adjust sizes to the nearest power of 2
+    layer_sizes = [1 << (size - 1).bit_length() for size in linear_sizes]
+
+    print(layer_sizes)
 
 def sum_all_diagonal_matrix(mat: torch.tensor): 
     n,_ = mat.shape

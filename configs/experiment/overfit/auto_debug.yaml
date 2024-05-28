@@ -37,7 +37,8 @@ data:
 
 callbacks:
   earlystopping: null
-  model_checkpoint: null
+  model_checkpoint: 
+    monitor: val/loss
 
 logger:
   wandb:
