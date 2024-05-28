@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-class VLMHead(nn.Module):
+class VLMHeadModel(nn.Module):
     def __init__(
         self,
         input_size: int = 512,

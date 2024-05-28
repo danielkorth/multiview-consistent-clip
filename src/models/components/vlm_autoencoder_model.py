@@ -3,10 +3,8 @@ from torch import nn
 from typing import Tuple
 import numpy as np
 
-from src.models.components.vlm_head import VLMHead
 
-
-class VLMAutoencoder(nn.Module):
+class VLMAutoencoderModel(nn.Module):
     def __init__(
         self,
         encoder_input_size: int = 512,
@@ -22,7 +20,6 @@ class VLMAutoencoder(nn.Module):
             n_hidden_layers=encoder_n_hidden_layers,
             output_size=encoding_size,
             act_fct=act_fct, 
-            is_encoder=True
         )
         
         self.view_dependent_encoder = VLMCoder(
@@ -30,7 +27,6 @@ class VLMAutoencoder(nn.Module):
             n_hidden_layers=encoder_n_hidden_layers,
             output_size=encoding_size,
             act_fct=act_fct, 
-            is_encoder=True
         )
         
         self.view_invariant_decoder = VLMCoder(
@@ -38,7 +34,6 @@ class VLMAutoencoder(nn.Module):
             n_hidden_layers=encoder_n_hidden_layers,
             output_size=encoder_input_size,
             act_fct=act_fct, 
-            is_encoder=False
         )
         
         self.view_dependent_decoder = VLMCoder(
@@ -46,7 +41,6 @@ class VLMAutoencoder(nn.Module):
             n_hidden_layers=encoder_n_hidden_layers,
             output_size=encoder_input_size,
             act_fct=act_fct, 
-            is_encoder=False
         )
 
         self.dropout_rate = dropout_rate
@@ -106,7 +100,6 @@ class VLMCoder(nn.Module):
         output_size: int = 128,
         dropout: float = 0.0,
         act_fct: nn.Module = nn.ReLU(),
-        is_encoder: bool = True
     ) -> None:
         
         super().__init__()

@@ -25,7 +25,7 @@ model:
   loss:
     _target_: src.models.components.losses.LossAutoencoder
     weight_similarity: 0.5
-    reg_vd: 0.2
+    weigth_autoencoder: 0.5
 
 data:
   batch_size: 1

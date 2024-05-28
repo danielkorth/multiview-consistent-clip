@@ -7,7 +7,7 @@ from torchmetrics.functional.pairwise import pairwise_cosine_similarity
 from src.utils.visualize import plot_object_similarity, plot_all_similarity 
 
 
-class ViewComprehensiveEmbeddingModule(LightningModule):
+class VLMAutoencoder(LightningModule):
 
     def __init__(
         self,
@@ -65,7 +65,6 @@ class ViewComprehensiveEmbeddingModule(LightningModule):
         text_embeddings = batch["prompt_embedding"]
         original_img_embeddings = batch["image_embeddings"]
         predicted_image_embeddings = self.net.forward_view_independent(original_img_embeddings)['decoded'] # [batch_size, data_points_size, embedding_size]
-        # predicted_image_embeddings = original_img_embeddings
         batch_size, data_points_size, embedding_size = predicted_image_embeddings.shape
 
         # calculate loss 

@@ -1,4 +1,4 @@
-_target_: src.models.view_comprehensive.ViewComprehensiveEmbeddingModule
+_target_: src.models.vlm_autoencoder.VLMAutoencoder
 
 optimizer:
   _target_: torch.optim.Adam
@@ -14,7 +14,7 @@ scheduler:
   patience: 10
 
 net:
-  _target_: src.models.components.vlm_autoencoder.VLMAutoencoder
+  _target_: src.models.components.vlm_autoencoder_model.VLMAutoencoderModel
 
   encoder_input_size: 512
   encoder_n_hidden_layers: 2
@@ -26,7 +26,6 @@ loss:
   _target_: src.models.components.losses.LossAutoencoder
   weight_similarity: 0.5
   weigth_autoencoder: 0.5
-  reg_vd: 0.0
 
 # compile model for faster training with pytorch 2.0
 compile: false

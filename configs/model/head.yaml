@@ -1,4 +1,4 @@
-_target_: src.models.view_invariant.ViewInvariantEmbeddingModule
+_target_: src.models.vlm_head.VLMHead
 
 optimizer:
   _target_: torch.optim.Adam
@@ -14,7 +14,7 @@ scheduler:
   patience: 10
 
 net:
-  _target_: src.models.components.vlm_head.VLMHead
+  _target_: src.models.components.vlm_head_model.VLMHeadModel
   input_size: 512 # based on CLIP 
   hidden_size: 512
   n_hidden_layers: 2 # number of hidden layers

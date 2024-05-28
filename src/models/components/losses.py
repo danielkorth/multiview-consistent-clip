@@ -56,6 +56,7 @@ class LossContrastive(nn.Module):
         sim_score_normalized = similarity_score_summed / (batch_size * (datapoint_size * (datapoint_size + 1) / 2))
         dissim_score_normalized = 0 if batch_size == 1 else dissimilarity_score_summed / (datapoint_size * (datapoint_size + 1) * batch_size * (batch_size - 1) / 2)
 
+        # Compute loss
         loss = (1-self.weight_similarity)*dissim_score_normalized - self.weight_similarity*sim_score_normalized
 
         return {'loss': loss, 'sim_score_normalized': sim_score_normalized, 'dissim_score_normalized': dissim_score_normalized}
@@ -89,7 +90,7 @@ class LossObjectSimilarity(nn.Module):
         mat_strided = mat_padded.as_strided((n, 2*n), (3*n + 1, 1)) # Change the strides
         sum_diags = torch.sum(mat_strided, 0) # Sums the resulting matrix's columns
 
-        #extract the sums corresponding to the diagonals with similarity scores and dissimilarity scores
+        #extract the sums corresponding to the diagonals with similarity scores
         dim = batch_size + batch_size * datapoint_size #dim of sim matrix
         similarity_indexes = np.arange(batch_size, dim, batch_size) #index of diagonals with sim score
         sim_mask = torch.zeros(dim).to(predicted_img_embeddings.device)
@@ -158,8 +159,6 @@ class LossAutoencoder(nn.Module):
 
         else:
             score_vi =  - similarity_score_normalized 
-
-
 
         loss = self.weight_auto * score_auto + (1-self.weight_auto) * score_vi
 
