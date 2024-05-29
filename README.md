@@ -174,7 +174,7 @@ This way, information from the CLIP model is not lost, and the user additionally
 At test time, we do a forward pass only through the view-independent encoder/decoder, to filter out the view-dependent information. 
 
 <div align="center">
-    <img src="figures/autoencoder/sketch.png" width="500">
+    <img src="figures/net_vizulaization/auto_train.png" width="500">
 </div>
 
 ### Training
