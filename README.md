@@ -206,7 +206,7 @@ On the other hand we observe a an average L2 distance of 0.17 between original e
 | --- |-------------------------|------------------------|--------------------------|
 | Baseline | 0.893 +/- 0.067 | 0.710 + 0.069 | 0.266 +/- 0.041 |
 | Object Head | 0.997 +/- 0.003 | 0.978 +/- 0.015 | 0.822 +/- 0.087 |
-| Contrasitve Head | 0.895 +/- 0.266 | 0.021 +/- 0.676 | 0.137 +/-0.139 |
+| Contrastive Head | 0.895 +/- 0.266 | 0.021 +/- 0.676 | 0.137 +/-0.139 |
 | Autoencoder| 0.965 +/- 0.043 | 0.827 +/- 0.094 | 0.323 +/- 0.039  |
 
 We report the mean Cosine Similarity. +/- denotes the standard deviation across all objects.
