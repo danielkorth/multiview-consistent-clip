@@ -60,3 +60,11 @@ train_autoencoder:
 	python scripts/train.py experiment=overfit/autoencoder logger=wandb
 	python scripts/train.py experiment=batch/autoencoder logger=wandb
 	python scripts/train.py experiment=train/autoencoder logger=wandb
+
+train_now:
+	# python scripts/train.py experiment=train/autoencoder logger=wandb
+	# # python scripts/train.py experiment=train/autoencoder logger=wandb model.loss.weight_similarity=1
+	# python scripts/train.py experiment=train/autoencoder logger=wandb model.loss.weight_autoencoder=0.2
+	# python scripts/train.py experiment=train/autoencoder logger=wandb model.loss.weight_autoencoder=0.8
+	python scripts/train.py experiment=train/autoencoder logger=wandb model.net.dropout_rate=0.2
+	python scripts/train.py experiment=train/autoencoder logger=wandb model.net.dropout_rate=0.2 model.loss.weight_similarity=1
