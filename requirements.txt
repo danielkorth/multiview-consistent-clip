@@ -28,3 +28,12 @@ matplotlib
 open3d
 transformers
 numpy
+sentencepiece # for siglip
+nptyping
+
+# --------- objaverse requirements ----------- # 
+boto3
+wandb
+tqdm
+objaverse
+tyro==0.3.38

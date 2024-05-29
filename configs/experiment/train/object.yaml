@@ -1,0 +1,50 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: lvm_embeddings
+  - override /model: head
+  - override /callbacks: default
+  - override /trainer: default
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["train", "object"]
+
+seed: 42 
+train: True
+
+trainer:
+  max_epochs: 1000
+  check_val_every_n_epoch: 10
+  accelerator: gpu
+
+model:
+  scheduler: null
+  loss:
+    _target_: src.models.components.losses.LossObjectSimilarity
+
+data:
+  batch_size: 2048
+  num_workers: 0
+  datapoint_size: 6
+  pin_memory: True
+  train_split: train.csv
+  val_split: val.csv
+  shuffle: True
+
+callbacks:
+  earlystopping: null
+  model_checkpoint: 
+    every_n_epochs: 10
+    monitor: val/loss
+
+logger:
+  wandb:
+    tags: ${tags}
+    group: "mvc-clip"
+  aim:
+    experiment: "train with object similarity objective"

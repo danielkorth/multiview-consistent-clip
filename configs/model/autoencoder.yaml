@@ -1,0 +1,31 @@
+_target_: src.models.vlm_autoencoder.VLMAutoencoder
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.001
+  weight_decay: 0.0
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 10
+
+net:
+  _target_: src.models.components.vlm_autoencoder_model.VLMAutoencoderModel
+
+  encoder_input_size: 512
+  encoder_n_hidden_layers: 2
+  encoding_size: 128
+
+  dropout_rate: 0.0
+
+loss:
+  _target_: src.models.components.losses.LossAutoencoder
+  weight_similarity: 0.5
+  weight_autoencoder: 0.5
+
+# compile model for faster training with pytorch 2.0
+compile: false

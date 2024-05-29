@@ -1,0 +1,28 @@
+_target_: src.models.vlm_head.VLMHead
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.001
+  weight_decay: 0.0
+
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 10
+
+net:
+  _target_: src.models.components.vlm_head_model.VLMHeadModel
+  input_size: 512 # based on CLIP 
+  hidden_size: 512
+  n_hidden_layers: 2 # number of hidden layers
+  output_size: 512
+
+loss:
+  _target_: src.models.components.losses.LossObjectSimilarity
+  weight_similarity: 0.5
+
+# compile model for faster training with pytorch 2.0
+compile: false

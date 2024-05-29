@@ -1,0 +1,48 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: lvm_embeddings
+  - override /model: autoencoder
+  - override /callbacks: default
+  - override /trainer: default
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["overfit", "autoencoder"]
+
+seed: 42 
+test: True
+
+trainer:
+  max_epochs: 1000
+
+model:
+  scheduler: null
+
+  loss:
+    _target_: src.models.components.losses.LossAutoencoder
+    weight_similarity: 0.5
+    weight_autoencoder: 0.5
+
+data:
+  batch_size: 1
+  datapoint_size: 6
+  num_workers: 0
+  train_split: train_overfit.csv
+  val_split: val_overfit.csv
+  shuffle: False
+
+callbacks:
+  earlystopping: null
+  model_checkpoint: null
+
+logger:
+  wandb:
+    tags: ${tags}
+    group: "mvc-clip"
+  aim:
+    experiment: "overfit with autoencoder"
