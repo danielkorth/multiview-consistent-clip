@@ -106,11 +106,11 @@ class LossObjectSimilarity(nn.Module):
 
 
 class LossAutoencoder(nn.Module):
-    def __init__(self, weight_similarity: float = 0.5, weigth_autoencoder: float = 0.2,  reg_vd: float = 0.0):
+    def __init__(self, weight_similarity: float = 0.5, weight_autoencoder: float = 0.2,  reg_vd: float = 0.0):
         super().__init__()
 
         self.weight_similarity = weight_similarity
-        self.weight_auto = weigth_autoencoder
+        self.weight_auto = weight_autoencoder
         self.reg_vd = reg_vd
 
     def forward(self,
