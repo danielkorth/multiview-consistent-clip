@@ -126,36 +126,6 @@ class VLMAutoencoder(LightningModule):
             for key in metrics.keys():
                 f.write("%s,%s\n"%(key,metrics[key]))
 
-        # # calculate pairwise cosine similarity between predicted image embeddings
-        # sim = pairwise_cosine_similarity(predicted_image_embeddings.view(-1, embedding_size), predicted_image_embeddings.view(-1, embedding_size))
-        # similarity_mat = torch.stack([sim[i:i+data_points_size, i:i+data_points_size] for i in range(0, sim.shape[0], data_points_size)]).squeeze()
-
-        # # calculate text to images similarity
-        # temp = pairwise_cosine_similarity(text_embeddings, predicted_image_embeddings.view(-1, embedding_size))
-        # t2i_similarity = torch.stack([temp[i, (i*data_points_size):(i*data_points_size)+data_points_size] for i in range(0, batch_size)])
-        # mean_t2i = t2i_similarity.mean()
-        # mean_t2i_per_object = t2i_similarity.mean(dim=0)
-        # std_t2i = t2i_similarity.std()
-        # std_t2i_per_object = t2i_similarity.std(dim=0)
-
-        # save_matrix_png(similarity_mat.mean(dim=0).cpu(), Path(self.cfg.paths.output_dir) / "sim_mean.png", type='mean')
-        # save_matrix_png(similarity_mat.std(dim=0).cpu(), Path(self.cfg.paths.output_dir) / "sim_std.png", type='std')
-
-        # # capture all metrics in a dictionary
-        # metrics = {
-        #     "loss": loss.cpu().item(),
-        #     "mean_t2i": mean_t2i.cpu().item(),
-        #     "mean_t2i_per_object": mean_t2i_per_object.cpu().tolist(),
-        #     "std_t2i": std_t2i.cpu().item(),
-        #     "std_t2i_per_object": std_t2i_per_object.cpu().tolist()
-        # }
-        # with open(Path(self.cfg.paths.output_dir) / 'metrics.csv', 'w') as f:
-        #     for key in metrics.keys():
-        #         f.write("%s,%s\n"%(key,metrics[key]))
-        # loss_dict = self.model_step(batch)
-
-        # self.log("test/loss", loss_dict['loss'], on_step=False, on_epoch=True, prog_bar=True)
-
     def setup(self, stage: str) -> None:
         """Lightning hook that is called at the beginning of fit (train + validate), validate,
         test, or predict.

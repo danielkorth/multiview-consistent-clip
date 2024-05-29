@@ -29,42 +29,8 @@ test-full: ## Run all tests
 train: ## Train the model
 	python src/train.py
 
-
 prepare_data:
 	python scripts/download_paths.py
 	python scripts/render_data.py
 	python scripts/get_vlm_embeddings.py +vlm='clip'
 	python scripts/generate_splits.py
-
-overfit_all:
-	python scripts/train.py experiment=overfit/object logger=wandb
-	python scripts/train.py experiment=overfit/contrastive logger=wandb
-	python scripts/train.py experiment=overfit/autoencoder logger=wandb
-
-batch_all:
-	python scripts/train.py experiment=batch/object logger=wandb
-	python scripts/train.py experiment=batch/contrastive logger=wandb
-	python scripts/train.py experiment=batch/autoencoder logger=wandb
-
-train_all:
-	python scripts/train.py experiment=train/object logger=wandb
-	python scripts/train.py experiment=train/contrastive logger=wandb
-	python scripts/train.py experiment=train/autoencoder logger=wandb
-
-train_object:
-	python scripts/train.py experiment=overfit/object logger=wandb
-	python scripts/train.py experiment=batch/object logger=wandb
-	python scripts/train.py experiment=train/object logger=wandb
-
-train_autoencoder:
-	python scripts/train.py experiment=overfit/autoencoder logger=wandb
-	python scripts/train.py experiment=batch/autoencoder logger=wandb
-	python scripts/train.py experiment=train/autoencoder logger=wandb
-
-train_autoencoder_ablate:
-	python scripts/train.py experiment=train/autoencoder logger=wandb
-	python scripts/train.py experiment=train/autoencoder logger=wandb model.loss.weight_similarity=1
-	python scripts/train.py experiment=train/autoencoder logger=wandb model.loss.weight_autoencoder=0.2
-	python scripts/train.py experiment=train/autoencoder logger=wandb model.loss.weight_autoencoder=0.8
-	python scripts/train.py experiment=train/autoencoder logger=wandb model.net.dropout_rate=0.2
-	python scripts/train.py experiment=train/autoencoder logger=wandb model.net.dropout_rate=0.2 model.loss.weight_similarity=1
