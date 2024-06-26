@@ -36,4 +36,4 @@ boto3
 wandb
 tqdm
 objaverse
-tyro==0.3.38
+tyro==0.8.5
